@@ -303,15 +303,14 @@ class Detector:
     return None
 
 
-  def WriteEventList(self):
-    OutfileName = '%s-eventlist.txt' % (self.fName)
+  def WriteEventsToFile(self, OutfileName):
     outfile = open(OutfileName, 'w')
     for i in range(len(self.fEventList[0])):
       UnixTime = self.fEventList[0][i]
-      Year = unixtime_to_year(UnixTime)
+      YearTime = unixtime_to_year(UnixTime)
       EnergyRec = self.fEventList[1][i]
       EnergyIon = self.fEventList[2][i]
-      outfile.write("%s %s %s \n" % (Year, EnergyRec, EnergyIon))
+      outfile.write("%s %s %s \n" % (YearTime, EnergyRec, EnergyIon))
     outfile.close()
     print 'Outfile %s written to disc' % OutfileName
     return True
