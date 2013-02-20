@@ -10,7 +10,7 @@ from pyWIMP.DMModels.base_model import BaseVariables
 DetectorName = 'ID3'
 ID = Detector(DetectorName)
 total_efficiency = ID.GetProjectedEfficiency('total')
-mass_of_wimp = 10
+mass_of_wimp = 8
 
 # pyWIMP models
 basevars = BaseVariables(ID.GetTimeBinning()[0],ID.GetTimeBinning()[-1],Energy['rec']['min'],Energy['rec']['max'],True,time_offset=-2./365.25) #offset to start at 1st Mar 2009
@@ -65,36 +65,33 @@ gamma_spectrum = gamma_linear
 
 wimp_spectrum = pywimp_pdf
 
-## alternative expontial wimp spectrum
-#wimp_slope = RooRealVar('wimp_slope','wimp_slope',-0.2)
-#wimp_slope.setConstant()
-#wimp_exponential = RooExponential('wimp_exponential','wimp_exponential',rec,wimp_slope)
-#wimp_spectrum = wimp_exponential
-
 
 # heat convolution
 heat_mean = RooRealVar('heat_mean','heat_mean',0)
 heat_smearing = RooGaussian('heat_smearing','heat_smearing',rec,heat_mean,heat_sigma)
 rec.setBins(10000,'fft')
 
-# main pdfs
+# background
 gamma_pdf = RooProdPdf('gamma_pdf','gamma_pdf',ion_gauss_ER,gamma_spectrum)
-wimp_pdf = RooProdPdf('wimp_pdf','wimp_pdf',ion_gauss_NR,wimp_spectrum)
-
-gamma_pdf_smeared = RooFFTConvPdf('gamma_pdf_smeared','gamma pdf * heat gaussian',rec,gamma_pdf,heat_smearing)
-wimp_pdf_smeared = RooFFTConvPdf('wimp_pdf_smeared','wimp pdf * heat gaussian',rec,wimp_pdf,heat_smearing)
-
+gamma_pdf_smeared = RooFFTConvPdf('gamma_pdf_smeared','gamma pdf * heat gaussian',rec,gamma_pdf,heat_smearing,2)
 final_gamma_pdf = gamma_pdf_smeared
-#final_gamma_pdf = gamma_pdf
 
-#final_wimp_pdf = wimp_pdf_smeared
-final_wimp_pdf = wimp_pdf
+# signal
+wimp_spectrum_smeared = RooFFTConvPdf('wimp_spectrum_smeared','wimp spectrum * heat gaussian',rec,wimp_spectrum,heat_smearing,2)
+wimp_spectrum_smeared.setBufferFraction(0.6)
+final_wimp_pdf = RooProdPdf('final_wimp_pdf','final_wimp_pdf',ion_gauss_NR,wimp_spectrum_smeared)
 
+
+# efficiency correction
 gamma_hist = final_gamma_pdf.createHistogram('gamma_hist',rec,RooFit.Binning(Energy['rec']['bins']),RooFit.YVar(ion,RooFit.Binning(Energy['ion']['bins'])))
+
 wimp_hist = final_wimp_pdf.createHistogram('wimp_hist',rec,RooFit.Binning(Energy['rec']['bins']),RooFit.YVar(ion,RooFit.Binning(Energy['ion']['bins'])))
+wimp_hist.Scale(n_wimp/wimp_hist.Integral('WIDTH'))
 
 bckgd_hist = gamma_hist.Clone('bckgd_hist');bckgd_hist.Multiply(total_efficiency)
 signal_hist = wimp_hist.Clone('signal_hist');signal_hist.Multiply(total_efficiency)
+
+n_signal = signal_hist.Integral('WIDTH')
 
 
 # efficiency corrected histograms back to pdf
@@ -105,32 +102,28 @@ signal_pdf = RooHistPdf('signal_pdf','signal_pdf',RooArgSet(rec,ion),signal_data
 
 
 # dataset
-data = RooDataSet.read('ID3-eventlist.txt',RooArgList(time,rec,ion))
+data = RooDataSet.read('ID3-eventlist_test.txt',RooArgList(time,rec,ion))
 scatter = data.createHistogram(rec,ion)
 valid_events = int(data.numEntries())
 
 
 # definition of final PDF model to fit the data to
-#final_pdf = RooAddPdf('final_pdf','r*signal+(1-r)*bckgd',RooArgList(signal_pdf,bckgd_pdf),RooArgList(ratio))
-final_pdf = bckgd_pdf
-#final_pdf = signal_pdf
+final_pdf = RooAddPdf('final_pdf','r*signal+(1-r)*bckgd',RooArgList(signal_pdf,bckgd_pdf),RooArgList(ratio))
 
 
-## two different possibillities to fit data
-#final_pdf.fitTo(data)
-
-#nll = RooNLLVar('nll','nll',final_pdf,data, RooFit.PrintEvalErrors(2))
-#minuit = RooMinuit(nll)
-#fitresults = minuit.fit('hvr')
+# maximum likelihood fit to data
+nll = RooNLLVar('nll','nll',final_pdf,data,RooFit.PrintEvalErrors(2))
+minuit = RooMinuit(nll)
+fitresults = minuit.fit('hvr')
 
 
-# toy data
+# toy data generation
 toydata = final_pdf.generate(RooArgSet(rec,ion),valid_events)
 toydata_scatter = toydata.createHistogram(rec,ion)
 
 
 final_hist = final_pdf.createHistogram('final_hist',rec,RooFit.Binning(Energy['rec']['bins']), RooFit.YVar(ion,RooFit.Binning(Energy['ion']['bins'])))
-final_hist.SetTitle('\gamma-bckgd PDF only')
+final_hist.SetTitle('fitted signal + bckgd PDF')
 
 # correct choice of binning
 recbins = 1*(Energy['rec']['max']-Energy['rec']['min'])
@@ -139,24 +132,24 @@ ionbins = 2*(Energy['ion']['max']-Energy['ion']['min'])
 recframe = rec.frame()
 data.plotOn(recframe,RooFit.Binning(recbins))
 final_pdf.plotOn(recframe,RooFit.LineColor(kBlue))
-#signal_pdf.plotOn(recframe,RooFit.LineColor(kRed))
-#bckgd_pdf.plotOn(recframe,RooFit.LineColor(kGreen))
-toydata.plotOn(recframe,RooFit.Binning(recbins),RooFit.MarkerColor(15),RooFit.LineColor(15))
+signal_pdf.plotOn(recframe,RooFit.LineColor(kRed))
+bckgd_pdf.plotOn(recframe,RooFit.LineColor(kGreen))
+toydata.plotOn(recframe,RooFit.Binning(recbins),RooFit.MarkerColor(15),RooFit.LineColor(17))
 data.plotOn(recframe,RooFit.Binning(recbins))
 
 
 ionframe = ion.frame()
 data.plotOn(ionframe, RooFit.Binning(ionbins))
 final_pdf.plotOn(ionframe,RooFit.LineColor(kBlue))
-#signal_pdf.plotOn(ionframe,RooFit.LineColor(kRed))
-#bckgd_pdf.plotOn(ionframe,RooFit.LineColor(kGreen))
-toydata.plotOn(ionframe,RooFit.Binning(ionbins),RooFit.MarkerColor(15),RooFit.LineColor(15))
+signal_pdf.plotOn(ionframe,RooFit.LineColor(kRed))
+bckgd_pdf.plotOn(ionframe,RooFit.LineColor(kGreen))
+toydata.plotOn(ionframe,RooFit.Binning(ionbins),RooFit.MarkerColor(15),RooFit.LineColor(17))
 data.plotOn(ionframe,RooFit.Binning(ionbins))
 
 
-c = TCanvas()
-c.Divide(2,2)
-c.cd(1)
+c0 = TCanvas('c0', 'fit results', 800, 600)
+c0.Divide(2,2)
+c0.cd(1)
 final_hist.Draw('COLZ')
 scatter.Draw('SAMES')
 scatter.SetMarkerColor(kBlack)
@@ -168,9 +161,48 @@ ER_centroid_func.SetLineWidth(2)
 NR_centroid_func.Draw('SAMES')
 NR_centroid_func.SetLineColor(kBlack)
 NR_centroid_func.SetLineWidth(2)
-c.cd(2)
+c0.cd(2)
 ionframe.Draw()
-c.cd(3)
+c0.cd(3)
 recframe.Draw()
-c.cd(4)
+c0.cd(4)
 final_hist.Draw('LEGO2')
+
+# fit results
+R = ratio.getVal()
+R90 = R + 1.64*ratio.getErrorHi()
+N90 = R90 * valid_events
+
+print R, R90, N90
+
+
+# testing the fit parameter distribution for toy data
+MC_Simulations = 10000
+
+mgr = RooMCStudy(final_pdf,RooArgSet(rec,ion))
+mgr.generateAndFit(MC_Simulations,valid_events,kTRUE)
+
+paramframe = mgr.plotParam(ratio,RooFit.FrameRange(0.,0.2),RooFit.Binning(100))
+nllframe = mgr.plotNLL()
+line = TLine()
+line.SetLineWidth(2)
+line.SetLineColor(kRed)
+
+c1 = TCanvas('c1', 'MC results', 800, 600)
+c1.Divide(1,2)
+
+c1.cd(1)
+paramframe.Draw()
+c1.Update()
+# ratio marker line for real data
+line.SetLineStyle(0)
+line.DrawLine(R,gPad.GetUymin(),R,gPad.GetUymax())
+line.SetLineStyle(7)
+line.DrawLine(R90,gPad.GetUymin(),R90,gPad.GetUymax())
+
+c1.cd(2)
+nllframe.Draw()
+c1.Update()
+# nll marker line for real data
+line.SetLineStyle(0)
+line.DrawLine(nll.getVal(),gPad.GetUymin(),nll.getVal(),gPad.GetUymax())
