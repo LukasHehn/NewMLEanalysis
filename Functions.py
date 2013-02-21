@@ -104,6 +104,11 @@ FiducialEfficiency.SetParName(0,'Parameter0')
 FiducialEfficiency.SetParName(1,'Parameter1')
 FiducialEfficiency.SetTitle('Fiducial Efficiency;E_{ion} (keV_{ee});Efficiency')
 
+# centroids of ER and NR band
+ER_centroid = TF1('ER_centroid','x*(1+(0.16*x^0.18)*([0]/3))/(1+[0]/3)',Energy['rec']['min'],Energy['rec']['max'])
+ER_centroid.SetParName(0,'voltage')
+NR_centroid = TF1('NR_centroid','0.16*x^1.18',Energy['rec']['min'],Energy['rec']['max'])
+
 
 def GetEnergyRecoilFromEstimator(energy_ee,voltage):
   function = ERecEstimator

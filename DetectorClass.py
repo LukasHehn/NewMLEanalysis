@@ -228,20 +228,20 @@ class Detector:
 
       EfficiencyCurve = FiducialEfficiency
       EfficiencyCurve.SetParameter(0, -1.87)
-      #EfficiencyCurve.SetParameter(1, 1.25)
-      EfficiencyCurve.SetParameter(1, 2*fiducial_baseline)
+      EfficiencyCurve.SetParameter(1, 1.25)
+      #EfficiencyCurve.SetParameter(1, 2*fiducial_baseline)
 
       for ybin in range(1, fiducial_eff_hist.GetNbinsY()+1): #energy bin loop
-	mean_energy = fiducial_eff_hist.GetYaxis().GetBinCenter(ybin)
+        mean_energy = fiducial_eff_hist.GetYaxis().GetBinCenter(ybin)
 
-	value = EfficiencyCurve.Eval(mean_energy)
-	if value >= 0 and fiducial_baseline != 0:
-	  efficiency = value
-	else:
-	  efficiency = 0.0
+        value = EfficiencyCurve.Eval(mean_energy)
+        if value >= 0 and fiducial_baseline != 0:
+          efficiency = value
+        else:
+          efficiency = 0.0
 
-	fiducial_eff_hist.SetBinContent(xbin, ybin, efficiency)
-	fiducial_eff_hist.SetBinError(xbin, ybin, 0.0)
+        fiducial_eff_hist.SetBinContent(xbin, ybin, efficiency)
+        fiducial_eff_hist.SetBinError(xbin, ybin, 0.0)
     return None
 
 
