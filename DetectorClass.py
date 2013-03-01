@@ -73,6 +73,9 @@ class Detector:
     self.fProjectedTotalEfficiency = TH2F(self.fName+'_projected_total_efficiency', self.fName+' Projected Total Efficiency;E_{Rec} (keV_{nr});E_{Ion} (keV_{ee});Efficiency', \
                                       self.fEnergyRecBinning.size-1, self.fEnergyRecBinning.flatten('C'), self.fEnergyIonBinning.size-1, self.fEnergyIonBinning.flatten('C'))
 
+    self.fGammaCutEfficiency = TH2F(self.fName+'_gamma_cut_efficiency', self.fName+' Gamma Cut Efficiency;E_{Rec} (keV_{nr});E_{Ion} (keV_{nr});Efficiency', \
+                                  self.fEnergyRecBinning.size-1, self.fEnergyRecBinning.flatten('C'), self.fEnergyIonBinning.size-1, self.fEnergyIonBinning.flatten('C'))
+
 
     self._FillHistograms(self.fGoodUnixPeriods)
     self._CalcTriggerEfficiency()
@@ -81,6 +84,8 @@ class Detector:
     self._CalcProjectedEfficiency('trigger')
     self._CalcProjectedEfficiency('fiducial')
     self._CalcProjectedEfficiency('total')
+
+    self._CalcGammaCutEfficiency(0.9)
 
 
 
@@ -433,3 +438,20 @@ class Detector:
     graph = TGraph(events,E_rec.flatten('C'),E_ion.flatten('C'))
     graph.SetTitle('Events for '+self.fName)
     return graph
+
+  def _CalcGammaCutEfficiency(self,offset):
+    hist = self.fGammaCutEfficiency
+    ER_centroid.SetParameter(0,6.4)
+    for xbin in range(1,hist.GetNbinsX()+1):
+      Erec = hist.GetXaxis().GetBinCenter(xbin)
+      ioncut = ER_centroid.Eval(Erec)-offset
+      for ybin in range(1,hist.GetNbinsY()+1):
+	Eion = hist.GetYaxis().GetBinCenter(ybin)
+	if Eion < ioncut:
+	  hist.SetBinContent(xbin, ybin, 1)
+	else:
+	  hist.SetBinContent(xbin, ybin, 0)
+    return True
+
+  def GetGammaCutEfficiency(self):
+    return self.fGammaCutEfficiency

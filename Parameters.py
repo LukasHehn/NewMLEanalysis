@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 binsize = 0.1
+binsize = 0.1
 Energy = {
-  'ion' : {'min' : 1, 'max' : 6, 'binsize' : binsize},\
-  'rec' : {'min' : 1, 'max' : 13, 'binsize' : binsize}
+  'ion' : {'min' : 1, 'max' : 10, 'binsize' : binsize},\
+  'rec' : {'min' : 1, 'max' : 20, 'binsize' : binsize}
 }
 Energy['ion']['bins'] = int((Energy['ion']['max']-Energy['ion']['min'])/Energy['ion']['binsize'])
 Energy['rec']['bins'] = int((Energy['rec']['max']-Energy['rec']['min'])/Energy['rec']['binsize'])
@@ -82,3 +83,5 @@ EricsResults = {
     30 : 4.85e-7
     }
 }
+
+Eric = [[7,8,10,12,15,20,25,30],[7.90E-4,1.17E-4,1.35E-5,4.17E-6,1.55E-6,7.34E-7,5.47E-7,4.85E-7]]
