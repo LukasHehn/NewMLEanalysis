@@ -71,22 +71,22 @@ def date_to_unixtime(date):
 
 
 # Lindhard quenching relation (nuclear recoil)
-Q_Lindhard = TF1('lindhard_quenching','[0]*(x^[1])', 0, 20)
-Q_Lindhard.SetParName(0, 'a')
-Q_Lindhard.SetParName(1, 'b')
-Q_Lindhard.FixParameter(0, 0.16)
-Q_Lindhard.FixParameter(1, 0.18)
-Q_Lindhard.SetNpx(1000)
-Q_Lindhard.SetTitle('Lindhard Quenching Nuclear Recoil;E_{Recoil} [keV];Q(E_{Rec})')
+LindhardQuenching = TF1('lindhard_quenching','[0]*(x^[1])', 0, 20)
+LindhardQuenching.SetParName(0,'a')
+LindhardQuenching.SetParName(1,'b')
+LindhardQuenching.FixParameter(0, 0.16)
+LindhardQuenching.FixParameter(1, 0.18)
+LindhardQuenching.SetNpx(1000)
+LindhardQuenching.SetTitle('Lindhard Quenching for Nuclear Recoils;E_{Recoil} [keV];Q(E_{Rec})')
 
 
 # Recoil energy estimator for nuclear recoils
-ERecEstimator = TF1('recoil_energy_estimator','(x/(1+[0]/[1]))*(1+[0]/[1]*0.16*x^0.18)', 0, 20)
-ERecEstimator.SetParName(0, 'Voltage')
-ERecEstimator.SetParName(1, 'Creation Potential')
-ERecEstimator.FixParameter(1, 3.0)
-ERecEstimator.SetNpx(1000)
-ERecEstimator.SetTitle('E_{Rec} estimator from E_{Heat};E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
+RecoilEstimator = TF1('recoil_energy_estimator','(x/(1+[0]/[1]))*(1+[0]/[1]*0.16*x^0.18)',0,20)
+RecoilEstimator.SetParName(0,'Voltage')
+RecoilEstimator.SetParName(1,'Creation Potential')
+RecoilEstimator.FixParameter(1,3.0)
+RecoilEstimator.SetNpx(1000)
+RecoilEstimator.SetTitle('E_{Rec} estimator from E_{Heat};E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
 
 
 # trigger efficiency from DAQ trigger threshold and resolution on heat channel
@@ -110,10 +110,30 @@ ER_centroid.SetParName(0,'voltage')
 NR_centroid = TF1('NR_centroid','0.16*x^1.18',Energy['rec']['min'],Energy['rec']['max'])
 
 
+# 95% C.L. gamma cut from Eric
+GammaCut = TF1('gamma_cut','x*((1+[0]*[1]/[2])/(1+[1]/[2]))+1.96*sqrt([3]^2+[4]^2*((1+[0]*[1]/[2])/(1+[1]/[2]))^2)',Energy['rec']['min'],Energy['rec']['max'])
+GammaCut.SetNpx(1000)
+GammaCut.SetParName(0,'Mean Quenching Factor')
+GammaCut.FixParameter(0, 0.24)
+GammaCut.SetParName(1,'Voltage')
+GammaCut.FixParameter(1, 6.4) #ID3 only
+GammaCut.SetParName(2,'Creation Potential')
+GammaCut.FixParameter(2, 3.0)
+GammaCut.SetParName(3,'Ionization Energy Resolution')
+GammaCut.SetParName(4,'Recoil Energy Resolution')
+GammaCut.SetTitle('Gamma Cut;E_{rec} (keV_{nr});E_{ion} (keV_{ee})')
+
+
+def RecoilResolutionFromHeat(FWHM_heat,voltage,Erec):
+  Q = LindhardQuenching.Eval(Erec)
+  FWHM_rec = FWHM_heat * ((1+voltage/3.0)/(1+1.18*Q*voltage/3.0))
+  return FWHM_rec
+
+
 def GetEnergyRecoilFromEstimator(energy_ee,voltage):
-  function = ERecEstimator
+  function = RecoilEstimator
   function.SetParameter(0,voltage)
-  function.FixParameter(1, 3.0) #electron-hole creation potential
+  function.FixParameter(1,3.0) #electron-hole creation potential
   energy_recoil = function.GetX(energy_ee)
   return energy_recoil
 

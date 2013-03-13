@@ -32,8 +32,9 @@ def Perform(mass_of_wimp):
   this['wimp_hist'] = this['final_wimp_pdf'].createHistogram('wimp_hist_%sGeV'%mass_of_wimp,rec,RooFit.Binning(Energy['rec']['bins']),RooFit.YVar(ion,RooFit.Binning(Energy['ion']['bins'])))
   this['wimp_hist'].Scale(result['N_wimp']/this['wimp_hist'].Integral('WIDTH'))
 
-  this['signal_hist'] = this['wimp_hist'].Clone('signal_hist_%sGeV'%mass_of_wimp);this['signal_hist'].Multiply(total_efficiency)
+  this['signal_hist'] = this['wimp_hist'].Clone('signal_hist_%sGeV'%mass_of_wimp)
 
+  this['signal_hist'].Multiply(total_efficiency)
   #additional gamma cut correction
   this['signal_hist'].Multiply(gamma_cut_efficiency)
 
@@ -55,7 +56,7 @@ gamma_cut_efficiency = ID.GetGammaCutEfficiency()
 
 
 # list of WIMP masses
-WIMP_Masses = [5,6,7,8,9,10,12,15,20,25,30]
+WIMP_Masses = [7,8,10,12,15,20,25,30]
 
 # dictionaries
 Container = {}
@@ -91,3 +92,5 @@ events = int(realdata.numEntries())
 # loop over several wimp masses
 for mass_of_wimp in WIMP_Masses:
   Perform(mass_of_wimp)
+  r = Results[mass_of_wimp]
+  print mass_of_wimp,r['N_wimp'],r['N_signal'],r['f_norm'],r['cross section limit']
