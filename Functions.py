@@ -124,7 +124,7 @@ GammaCut.SetParName(4,'Recoil Energy Resolution')
 GammaCut.SetTitle('Gamma Cut;E_{rec} (keV_{nr});E_{ion} (keV_{ee})')
 
 
-def RecoilResolutionFromHeat(FWHM_heat,voltage,Erec):
+def RecoilResolutionFromHeatBaseline(FWHM_heat,voltage,Erec):
   Q = LindhardQuenching.Eval(Erec)
   FWHM_rec = FWHM_heat * ((1+voltage/3.0)/(1+1.18*Q*voltage/3.0))
   return FWHM_rec

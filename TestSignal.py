@@ -28,16 +28,20 @@ def Perform(mass_of_wimp):
   # signal
   this['final_wimp_pdf'] = RooProdPdf('final_wimp_pdf_%sGeV'%mass_of_wimp,'final_wimp_pdf',this['wimp_spectrum'],this['ion_gauss_NR'])
 
-  # efficiency correction
+  # histogram
   this['wimp_hist'] = this['final_wimp_pdf'].createHistogram('wimp_hist_%sGeV'%mass_of_wimp,rec,RooFit.Binning(Energy['rec']['bins']),RooFit.YVar(ion,RooFit.Binning(Energy['ion']['bins'])))
-  this['wimp_hist'].Scale(result['N_wimp']/this['wimp_hist'].Integral('WIDTH'))
 
+  # scale to expected WIMP event count
+  this['wimp_hist'].Scale(result['N_wimp']/this['wimp_hist'].Integral('WIDTH'))
   this['signal_hist'] = this['wimp_hist'].Clone('signal_hist_%sGeV'%mass_of_wimp)
 
+  # correct for detector efficiency
   this['signal_hist'].Multiply(total_efficiency)
-  #additional gamma cut correction
+
+  # correction for  additional gamma cut
   this['signal_hist'].Multiply(gamma_cut_efficiency)
 
+  # remaining number of wimp events after efficiency correction
   result['N_signal'] = this['signal_hist'].Integral('WIDTH')
 
 
@@ -45,6 +49,7 @@ def Perform(mass_of_wimp):
   this['signal_datahist'] = RooDataHist('signal_datahist_%sGeV'%mass_of_wimp,'signal_datahist',RooArgList(rec,ion),this['signal_hist'])
   this['signal_pdf'] = RooHistPdf('signal_pdf_%sGeV'%mass_of_wimp,'signal_pdf',RooArgSet(rec,ion),this['signal_datahist'])
 
+  # calculate cross section limit for no observed events and 90% poisson error
   result['cross section limit'] = result['f_norm'] * (2.35/result['N_signal'])
   return True
 
