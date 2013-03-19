@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-binsize = 0.1
+binsize = 1
 Energy = {
   'ion' : {'min' : 0, 'max' : 10, 'binsize' : binsize},\
   'rec' : {'min' : 0, 'max' : 20, 'binsize' : binsize}

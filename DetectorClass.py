@@ -70,7 +70,7 @@ class Detector:
                                       self.fEnergyRecBinning.size-1, self.fEnergyRecBinning.flatten('C'))
     self.fProjectedFiducialEfficiency = TH1F(self.fName+'_projected_fiducial_efficiency', self.fName+' Projected Fiducial Efficiency;E_{Ion} (keV_{ee});Efficiency', \
                                       self.fEnergyIonBinning.size-1, self.fEnergyIonBinning.flatten('C'))
-    self.fProjectedTotalEfficiency = TH2F(self.fName+'_projected_total_efficiency', self.fName+' Projected Total Efficiency;E_{Rec} (keV_{nr});E_{Ion} (keV_{ee});Efficiency', \
+    self.fProjectedEnergyEfficiency = TH2F(self.fName+'_projected_energy_efficiency', self.fName+' Projected Energy Efficiency;E_{Rec} (keV_{nr});E_{Ion} (keV_{ee});Efficiency', \
                                       self.fEnergyRecBinning.size-1, self.fEnergyRecBinning.flatten('C'), self.fEnergyIonBinning.size-1, self.fEnergyIonBinning.flatten('C'))
 
     self.fGammaCutEfficiency = TH2F(self.fName+'_gamma_cut_efficiency', self.fName+' Gamma Cut Efficiency;E_{Rec} (keV_{nr});E_{Ion} (keV_{nr});Efficiency', \
@@ -81,9 +81,8 @@ class Detector:
     self._CalcTriggerEfficiency()
     self._CalcFiducialEfficiency()
     self._CalcTotalEfficiency()
-    self._CalcProjectedEfficiency('trigger')
-    self._CalcProjectedEfficiency('fiducial')
-    self._CalcProjectedEfficiency('total')
+
+    self._CalcEnergyEfficiency()
 
     self._CalcGammaCutEfficiency(0.9)
 
@@ -191,7 +190,7 @@ class Detector:
       self.fFiducialMeanBaseline.Fill(time, fiducial_mean)
 
       self.fVoltage.Fill(time, voltage)
-      self.fLivetimeEfficiency.Fill(time, 1)
+      self.fLivetimeEfficiency.Fill(time, 1.0)
 
 
   def _CalcTriggerEfficiency(self):
@@ -215,13 +214,13 @@ class Detector:
 	mean_energy = trigger_eff_hist.GetYaxis().GetBinCenter(ybin)
 	value = EfficiencyCurve.Eval(mean_energy)
 
-	if value >= 0 and FWHM_heat != 0 and Threshhold_heat != 0:
+	if value >= 0.0 and FWHM_heat != 0.0 and Threshhold_heat != 0.0:
 	  efficiency = value
 	else:
-	  efficiency = 0
+	  efficiency = 0.0
 
 	trigger_eff_hist.SetBinContent(xbin, ybin, efficiency)
-	trigger_eff_hist.SetBinError(xbin, ybin, 0)
+	trigger_eff_hist.SetBinError(xbin, ybin, 0.0)
     return None
 
 
@@ -232,15 +231,14 @@ class Detector:
       fiducial_baseline = self.fFiducialMeanBaseline.GetBinContent(xbin)
 
       EfficiencyCurve = FiducialEfficiency
-      EfficiencyCurve.SetParameter(0, -1.87)
-      EfficiencyCurve.SetParameter(1, 1.25)
-      #EfficiencyCurve.SetParameter(1, 2*fiducial_baseline)
-
+      EfficiencyCurve.SetParameter(0, -1.876)
+      EfficiencyCurve.SetParameter(1, 1.247)
+      EfficiencyCurve.SetParameter(2, 0.947)
       for ybin in range(1, fiducial_eff_hist.GetNbinsY()+1): #energy bin loop
         mean_energy = fiducial_eff_hist.GetYaxis().GetBinCenter(ybin)
 
         value = EfficiencyCurve.Eval(mean_energy)
-        if value >= 0 and fiducial_baseline != 0:
+        if value >= 0.0 and fiducial_baseline != 0.0:
           efficiency = value
         else:
           efficiency = 0.0
@@ -268,43 +266,30 @@ class Detector:
 	  if livetime_eff != 0 and trigger_eff != 0 and fiducial_eff != 0:
 	    total_eff = livetime_eff * trigger_eff * fiducial_eff
 	  else:
-	    total_eff = 0
+	    total_eff = 0.0
 
 	  total_eff_hist.SetBinContent(xbin, ybin, zbin, total_eff)
-	  total_eff_hist.SetBinError(xbin, ybin, zbin, 0)
+	  total_eff_hist.SetBinError(xbin, ybin, zbin, 0.0)
     return None
 
 
   def _CalcProjectedEfficiency(self, efficiency): #calculate livetime-weighted average energy efficiency hist
-    if efficiency in ['trigger', 'fiducial']:
-      if efficiency == 'trigger':
-	inhist = self.fTriggerEfficiency
-	outhist = self.fProjectedTriggerEfficiency
-      elif efficiency == 'fiducial':
-	inhist = self.fFiducialEfficiency
-	outhist = self.fProjectedFiducialEfficiency
+    if efficiency == 'trigger':
+      inhist = self.fTriggerEfficiency
+      outhist = self.fProjectedTriggerEfficiency
+    elif efficiency == 'fiducial':
+      inhist = self.fFiducialEfficiency
+      outhist = self.fProjectedFiducialEfficiency
 
-      for ybin in range(1, inhist.GetNbinsY()+1):
-	Temp = 0
-	for xbin in range(1,inhist.GetNbinsX()+1):
-	  timewidth = inhist.GetXaxis().GetBinWidth(xbin)
-	  efficiency = inhist.GetBinContent(xbin, ybin)
-	  Temp += timewidth * efficiency
-	outhist.SetBinContent(ybin, Temp)
-	outhist.SetBinError(ybin, 0)
-    elif efficiency == 'total':
-      inhist = self.fTotalEfficiency
-      outhist = self.fProjectedTotalEfficiency
-
-      for zbin in range(1, inhist.GetNbinsZ()+1):
-        for ybin in range(1, inhist.GetNbinsY()+1):
-          Temp = 0
-          for xbin in range(1,inhist.GetNbinsX()+1):
-            timewidth = inhist.GetXaxis().GetBinWidth(xbin)
-            efficiency = inhist.GetBinContent(xbin, ybin, zbin)
-            Temp += timewidth * efficiency
-          outhist.SetBinContent(ybin, zbin, Temp)
-          outhist.SetBinError(ybin, zbin, 0)
+    for ybin in range(1, inhist.GetNbinsY()+1):
+      Temp = 0.0
+      for xbin in range(1,inhist.GetNbinsX()+1):
+	timewidth = inhist.GetXaxis().GetBinWidth(xbin)
+	efficiency = inhist.GetBinContent(xbin, ybin)
+	Temp += timewidth * efficiency
+      Temp /= self.GetLivetime()
+      outhist.SetBinContent(ybin, Temp)
+      outhist.SetBinError(ybin, 0.0)
     return None
 
 
@@ -356,7 +341,7 @@ class Detector:
 
 
   def GetExposure(self): # in kg*days
-    return self.GetLivetime()*365*self.fMass
+    return self.GetLivetime()*365.*self.fMass
 
 
   def GetLivetimeEfficiency(self):
@@ -401,11 +386,11 @@ class Detector:
 
   def GetProjectedEfficiency(self, name):
     if name == 'trigger':
+      if self.fProjectedTriggerEfficiency.GetEntries() == 0.0: self._CalcProjectedEfficiency('trigger')
       return self.fProjectedTriggerEfficiency
     elif name == 'fiducial':
+      if self.fProjectedFiducialEfficiency.GetEntries() == 0.0: self._CalcProjectedEfficiency('fiducial')
       return self.fProjectedFiducialEfficiency
-    elif name == 'total':
-      return self.fProjectedTotalEfficiency
 
 
   def GetWeightedAverage(self, name):
@@ -421,7 +406,7 @@ class Detector:
     elif name == 'guardbottom': hist = self.fGuardBottomBaseline
 
     TotalTime = self.fLivetimeEfficiency.Integral('WIDTH')
-    Weighted_Value_Sum = 0
+    Weighted_Value_Sum = 0.0
     for xbin in range(1,hist.GetNbinsX()+1):
       time = hist.GetXaxis().GetBinWidth(xbin)
       value = hist.GetBinContent(xbin)
@@ -429,6 +414,7 @@ class Detector:
       Weighted_Value_Sum += weighted_value
     average_value = Weighted_Value_Sum / TotalTime
     return average_value
+
 
   def GetEventGraphEnergy(self):
     events = len(self.fEventList[0])
@@ -439,6 +425,7 @@ class Detector:
     graph.SetTitle('Events for '+self.fName)
     return graph
 
+
   def _CalcGammaCutEfficiency(self,offset):
     hist = self.fGammaCutEfficiency
     ER_centroid.SetParameter(0,6.4)
@@ -448,10 +435,32 @@ class Detector:
       for ybin in range(1,hist.GetNbinsY()+1):
 	Eion = hist.GetYaxis().GetBinCenter(ybin)
 	if Eion < ioncut:
-	  hist.SetBinContent(xbin, ybin, 1)
+	  hist.SetBinContent(xbin, ybin, 1.0)
 	else:
-	  hist.SetBinContent(xbin, ybin, 0)
+	  hist.SetBinContent(xbin, ybin, 0.0)
     return True
+
 
   def GetGammaCutEfficiency(self):
     return self.fGammaCutEfficiency
+
+
+  def _CalcEnergyEfficiency(self):
+    inhist = self.fTotalEfficiency
+    outhist = self.fProjectedEnergyEfficiency
+
+    for zbin in range(1, inhist.GetNbinsZ()+1):
+      for ybin in range(1, inhist.GetNbinsY()+1):
+	Temp = 0
+	for xbin in range(1,inhist.GetNbinsX()+1):
+	  timewidth = inhist.GetXaxis().GetBinWidth(xbin)
+	  total_efficiency = inhist.GetBinContent(xbin, ybin, zbin)
+	  Temp += timewidth * total_efficiency
+	Temp /= self.GetLivetime()
+	outhist.SetBinContent(ybin, zbin, Temp)
+	outhist.SetBinError(ybin, zbin, 0.0)
+    return None
+
+
+  def GetProjectedEnergyEfficiency(self):
+    return self.fProjectedEnergyEfficiency

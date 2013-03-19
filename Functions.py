@@ -98,10 +98,11 @@ TriggerEfficiency.SetTitle('Trigger Efficiency;E_{Heat} (keV);Efficiency')
 
 
 # measured fiducial efficiency (division of neutron histogram with/without fiducial cut)
-FiducialEfficiency = TF1('fiducial_efficiency','0.95*(1-exp([0]*(x-[1])))', 0, 30)
+FiducialEfficiency = TF1('fiducial_efficiency','[2]*(1-exp([0]*(x-[1])))', 0, 30)
 #FiducialEfficiency.SetNpx(Energy['ion']['bins']*10)
-FiducialEfficiency.SetParName(0,'Parameter0')
-FiducialEfficiency.SetParName(1,'Parameter1')
+FiducialEfficiency.SetParName(0,'Slope')
+FiducialEfficiency.SetParName(1,'Cut off')
+FiducialEfficiency.SetParName(2,'Maximum')
 FiducialEfficiency.SetTitle('Fiducial Efficiency;E_{ion} (keV_{ee});Efficiency')
 
 # centroids of ER and NR band
