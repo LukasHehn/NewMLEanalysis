@@ -2,9 +2,29 @@
 from ROOT import *
 from Parameters import *
 from DetectorClass import *
+from Functions import *
 import pyWIMP.DMModels.wimp_model as wimp_model
 from pyWIMP.DMModels.flat_model import FlatModel
 from pyWIMP.DMModels.base_model import BaseVariables
+
+
+def WIMPsignal(mass_of_wimp,sigma_ion,sigma_rec,spectrum):
+  denom_i=1./(2*pow(sigma_ion,2))
+  denom_r=1./(2*pow(sigma_rec,2))
+  signal_hist = TH2F('signal_hist_%sGeV'%mass_of_wimp,'WIMP Density for %s GeV;E_{Rec} (keV_{nr});E_{Ion} (keV_{nr});Density'%mass_of_wimp,Energy['rec']['bins'],Energy['rec']['min'],Energy['rec']['max'],Energy['ion']['bins'],Energy['ion']['min'],Energy['ion']['max'])
+  for recbin in range(1,signal_hist.GetNbinsX()+1):
+    Erec = signal_hist.GetXaxis().GetBinCenter(recbin)
+    for ionbin in range(1,signal_hist.GetNbinsY()+1):
+      Eion = signal_hist.GetYaxis().GetBinCenter(ionbin)
+      summe=0
+      for recbinspec in range(1,spectrum.GetNbinsX()+1):
+	ErecSpec = spectrum.GetXaxis().GetBinCenter(recbinspec)
+	Q = LindhardQuenching.Eval(ErecSpec)
+	wimprate = spectrum.GetBinContent(recbinspec)
+	kernel=TMath.Exp(-denom_r*pow((Erec-ErecSpec),2)-denom_i*pow((Eion-Q*ErecSpec),2))
+	summe+=(kernel*wimprate)
+      signal_hist.SetBinContent(recbin,ionbin,0.1*summe/(2*3.141592*sigma_rec*sigma_ion))
+  return signal_hist
 
 
 def Perform(mass_of_wimp):
@@ -14,25 +34,20 @@ def Perform(mass_of_wimp):
   Container[mass_of_wimp] = {}
   this = Container[mass_of_wimp]
 
-  # position of bands
-  this['NR_centroid'] = RooFormulaVar('NR_centroid_%sGeV'%mass_of_wimp,'0.16*@0^1.18',RooArgList(rec))
-
-  # gaussians in ionization energy with shifting mean in recoil energy
-  this['ion_gauss_NR'] = RooGaussian('ion_gauss_NR_%sGeV'%mass_of_wimp,'gauss with shifted mean',ion,this['NR_centroid'],fiducial_sigma)
-
   this['pywimp_pdf'] = wm.get_WIMP_model_with_escape_vel(mass_of_wimp)
-  this['wimp_spectrum'] = this['pywimp_pdf']
+
   result['f_norm'] = wm.get_normalization().getVal()
-  result['N_wimp'] = this['pywimp_pdf'].expectedEvents(RooArgSet(time,rec)) # number of expected events per nucleus cross section [pb] for detector mass in time and energy range
+  result['N_wimp'] = this['pywimp_pdf'].expectedEvents(RooArgSet(time,rec)) # number of expected events per nucleon cross section [pb] for detector mass in time and energy range
 
-  # signal
-  this['final_wimp_pdf'] = RooProdPdf('final_wimp_pdf_%sGeV'%mass_of_wimp,'final_wimp_pdf',this['wimp_spectrum'],this['ion_gauss_NR'])
+  this['pywimp_hist'] = this['pywimp_pdf'].createHistogram('pywimp_hist_%sGeV'%mass_of_wimp,rec,RooFit.Binning(Energy['rec']['bins']))
+  # scale to differential rate in nucleon cross section
+  this['pywimp_hist'].Scale(result['N_wimp']/this['pywimp_hist'].Integral())
 
-  # histogram
-  this['wimp_hist'] = this['final_wimp_pdf'].createHistogram('wimp_hist_%sGeV'%mass_of_wimp,rec,RooFit.Binning(Energy['rec']['bins']),RooFit.YVar(ion,RooFit.Binning(Energy['ion']['bins'])))
+  # signal histogram
+  this['wimp_hist'] = WIMPsignal(mass_of_wimp,sigma_ion,sigma_rec,this['pywimp_hist'])
 
   # scale to expected WIMP event count
-  this['wimp_hist'].Scale(result['N_wimp']/this['wimp_hist'].Integral('WIDTH'))
+  this['wimp_hist'].Scale(result['N_wimp']/this['wimp_hist'].Integral())
   this['signal_hist'] = this['wimp_hist'].Clone('signal_hist_%sGeV'%mass_of_wimp)
 
   # correct for detector efficiency
@@ -42,15 +57,10 @@ def Perform(mass_of_wimp):
   this['signal_hist'].Multiply(gamma_cut_efficiency)
 
   # remaining number of wimp events after efficiency correction
-  result['N_signal'] = this['signal_hist'].Integral('WIDTH')
-
-
-  # efficiency corrected histograms back to pdf
-  this['signal_datahist'] = RooDataHist('signal_datahist_%sGeV'%mass_of_wimp,'signal_datahist',RooArgList(rec,ion),this['signal_hist'])
-  this['signal_pdf'] = RooHistPdf('signal_pdf_%sGeV'%mass_of_wimp,'signal_pdf',RooArgSet(rec,ion),this['signal_datahist'])
+  result['N_signal'] = this['signal_hist'].Integral()
 
   # calculate cross section limit for no observed events and 90% poisson error
-  result['cross section limit'] = result['f_norm'] * (2.35/result['N_signal'])
+  result['cross section limit'] = result['f_norm']*(2.35/result['N_signal'])
   return True
 
 
@@ -79,15 +89,17 @@ rec.SetNameTitle('rec','E_{rec}')
 rec.setUnit('keV_{nr}')
 
 # detector specific parameters
-voltage = RooRealVar('voltage','applied voltage',ID.GetWeightedAverage('voltage'))
-voltage.setConstant()
+voltage = ID.GetWeightedAverage('voltage')
 
-heat_baseline_nr = GetEnergyRecoilFromEstimator(ID.GetWeightedAverage('heat'),voltage.getVal())
-heat_FWHM = RooRealVar('heat_FWHM','FWHM heat channel baseline',heat_baseline_nr)
-heat_sigma = RooFormulaVar('heat_sigma','heat channel baseline resolution','@0/sqrt(8*log(2))',RooArgList(heat_FWHM))
+FWHM_heat = ID.GetWeightedAverage('heat')
+sigma_heat = FWHM_heat/2.35
 
-fiducial_FWHM = RooRealVar('fiducial_FWHM','FWHM fiducial electrode baseline',ID.GetWeightedAverage('fiducialmean'))
-fiducial_sigma = RooFormulaVar('fiducial_sigma','fiducial electrode baseline resolution','@0/sqrt(8*log(2))', RooArgList(fiducial_FWHM))
+sigma_rec = RecoilResolutionFromHeatBaseline(sigma_heat,voltage,10)
+
+FWHM_ion = ID.GetWeightedAverage('fiducialmean')
+sigma_ion = FWHM_ion/2.35
+
+print sigma_ion, sigma_rec
 
 # dataset
 realdata = RooDataSet.read('ID3-eventlist_test.txt',RooArgList(time,rec,ion))

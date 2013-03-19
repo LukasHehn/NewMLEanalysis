@@ -198,27 +198,24 @@ class Detector:
     trigger_eff_hist = self.fTriggerEfficiency
 
     for xbin in range(1,trigger_eff_hist.GetNbinsX()+1):
-      heat_baseline_ee = self.fHeatBaseline.GetBinContent(xbin)
-      heat_threshold_ee = self.fHeatThreshold.GetBinContent(xbin)
+      FWHM_heat = self.fHeatBaseline.GetBinContent(xbin)
+      Threshhold_heat = self.fHeatThreshold.GetBinContent(xbin)
       voltage = self.fVoltage.GetBinContent(xbin)
 
-      recoil_threshold_nr = GetEnergyRecoilFromEstimator(heat_threshold_ee, voltage)
-      recoil_baseline_nr = RecoilResolutionFromHeatBaseline(heat_baseline_ee,voltage,recoil_threshold_nr) #resolution at threshold energy
+      sigma_heat = FWHM_heat/2.35
 
-      # old estimation
-      #recoil_baseline_nr = GetEnergyRecoilFromEstimator(heat_baseline_ee, voltage)
-
-      recoil_resolution_nr = recoil_baseline_nr / (2*sqrt(2*log(2)))
+      Threshhold_rec = GetEnergyRecoilFromEstimator(Threshhold_heat, voltage)
+      sigma_rec = RecoilResolutionFromHeatBaseline(sigma_heat,voltage,Threshhold_rec) #resolution at threshold energy
 
       EfficiencyCurve = TriggerEfficiency
-      EfficiencyCurve.SetParameter(0, recoil_threshold_nr)
-      EfficiencyCurve.SetParameter(1, recoil_resolution_nr)
+      EfficiencyCurve.SetParameter(0, Threshhold_rec)
+      EfficiencyCurve.SetParameter(1, sigma_rec)
 
       for ybin in range(1, trigger_eff_hist.GetNbinsY()+1):
 	mean_energy = trigger_eff_hist.GetYaxis().GetBinCenter(ybin)
 	value = EfficiencyCurve.Eval(mean_energy)
 
-	if value >= 0 and heat_baseline_ee != 0 and heat_threshold_ee != 0:
+	if value >= 0 and FWHM_heat != 0 and Threshhold_heat != 0:
 	  efficiency = value
 	else:
 	  efficiency = 0

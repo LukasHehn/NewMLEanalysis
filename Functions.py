@@ -81,25 +81,25 @@ LindhardQuenching.SetTitle('Lindhard Quenching for Nuclear Recoils;E_{Recoil} [k
 
 
 # Recoil energy estimator for nuclear recoils
-RecoilEstimator = TF1('recoil_energy_estimator','(x/(1+[0]/[1]))*(1+[0]/[1]*0.16*x^0.18)',0,20)
+RecoilEstimator = TF1('recoil_energy_estimator','(x/(1+[0]/[1]))*(1+[0]/[1]*0.16*x^0.18)', 0, 30)
 RecoilEstimator.SetParName(0,'Voltage')
 RecoilEstimator.SetParName(1,'Creation Potential')
 RecoilEstimator.FixParameter(1,3.0)
-RecoilEstimator.SetNpx(1000)
+#RecoilEstimator.SetNpx(1000)
 RecoilEstimator.SetTitle('E_{Rec} estimator from E_{Heat};E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
 
 
 # trigger efficiency from DAQ trigger threshold and resolution on heat channel
-TriggerEfficiency = TF1('trigger_efficiency','0.5*(1+ROOT::Math::erf(((x-[0])/([1]*sqrt(2)))))', Energy['rec']['min'], Energy['rec']['max'])
-TriggerEfficiency.SetNpx(Energy['rec']['bins']*10)
+TriggerEfficiency = TF1('trigger_efficiency','0.5*(1+ROOT::Math::erf(((x-[0])/([1]*sqrt(2)))))', 0, 30)
+#TriggerEfficiency.SetNpx(Energy['rec']['bins']*10)
 TriggerEfficiency.SetParName(0, 'Threshold')
 TriggerEfficiency.SetParName(1, 'Resolution')
 TriggerEfficiency.SetTitle('Trigger Efficiency;E_{Heat} (keV);Efficiency')
 
 
 # measured fiducial efficiency (division of neutron histogram with/without fiducial cut)
-FiducialEfficiency = TF1('fiducial_efficiency','0.95*(1-exp([0]*(x-[1])))',Energy['ion']['min'],Energy['ion']['max'])
-FiducialEfficiency.SetNpx(Energy['ion']['bins']*10)
+FiducialEfficiency = TF1('fiducial_efficiency','0.95*(1-exp([0]*(x-[1])))', 0, 30)
+#FiducialEfficiency.SetNpx(Energy['ion']['bins']*10)
 FiducialEfficiency.SetParName(0,'Parameter0')
 FiducialEfficiency.SetParName(1,'Parameter1')
 FiducialEfficiency.SetTitle('Fiducial Efficiency;E_{ion} (keV_{ee});Efficiency')
