@@ -10,7 +10,7 @@ from pyWIMP.DMModels.base_model import BaseVariables
 
 mass_of_wimp = 10
 
-#ID = Detector('ID3')
+ID = Detector('ID3')
 
 
 def WimpSignal2DEric(sigma_ion,sigma_rec,spectrum):

@@ -405,15 +405,13 @@ class Detector:
     elif name == 'guardtop': hist = self.fGuardTopBaseline
     elif name == 'guardbottom': hist = self.fGuardBottomBaseline
 
-    TotalTime = self.fLivetimeEfficiency.Integral('WIDTH')
-    Weighted_Value_Sum = 0.0
+    Temp = 0.0
     for xbin in range(1,hist.GetNbinsX()+1):
-      time = hist.GetXaxis().GetBinWidth(xbin)
+      timewidth = hist.GetXaxis().GetBinWidth(xbin)
       value = hist.GetBinContent(xbin)
-      weighted_value = time * value
-      Weighted_Value_Sum += weighted_value
-    average_value = Weighted_Value_Sum / TotalTime
-    return average_value
+      Temp = timewidth * value
+    Temp /= self.GetLivetime()
+    return Average
 
 
   def GetEventGraphEnergy(self):
