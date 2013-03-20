@@ -393,7 +393,7 @@ class Detector:
       return self.fProjectedFiducialEfficiency
 
 
-  def GetWeightedAverage(self, name):
+  def GetAverageValue(self, name):
     if name == 'voltage': hist = self.fVoltage
     elif name == 'heat': hist = self.fHeatBaseline
     elif name == 'threshold': hist = self.fHeatThreshold
@@ -409,9 +409,9 @@ class Detector:
     for xbin in range(1,hist.GetNbinsX()+1):
       timewidth = hist.GetXaxis().GetBinWidth(xbin)
       value = hist.GetBinContent(xbin)
-      Temp = timewidth * value
+      Temp += timewidth * value
     Temp /= self.GetLivetime()
-    return Average
+    return Temp
 
 
   def GetEventGraphEnergy(self):

@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 import datetime as dt
 import calendar
-from ROOT import TF1, exp, log
+#from ROOT import TF1, exp, log, TH1F, TH2F
+from ROOT import *
 from Parameters import *
 from couchdbkit import Server, Database
 import couchdbkit
+import numpy as np
 
 
 # global
@@ -178,3 +180,56 @@ def GetERAConstants(Detector):
   for row in vr:
     constantDoc[row['key']] = row['doc']
   return constantDoc[Detector]
+
+
+def ReadInWimpSpectrum(mass_of_wimp):
+  basedir="/kalinka/home/hehn/PhD/LowMassEric/"
+  filename=basedir+"wimpsignal_M"+str(mass_of_wimp)+".txt"
+
+  Energies,Rates = [], []
+
+  Integral = 0
+
+  print "reading WIMP spectrum from:",filename
+
+  infile = open(filename,'r')
+  for line in infile:
+    energy, rate = line.split()
+    Integral += float(rate)
+    Energies.append(float(energy))
+    Rates.append(float(rate))
+  infile.close()
+
+  DeltaE = Energies[1]-Energies[0]
+  Integral *= DeltaE
+
+  Energybins = np.array(Energies, dtype=np.float)
+
+  Hist = TH1F('wimp_spectrum_%sGeV'%mass_of_wimp,'Spectrum for 10^{-6}pb and %sGeV;E_{recoil} [keV];Rate [evts/kg day 0.02keV]'%mass_of_wimp,Energybins.size-1, Energybins.flatten('C'))
+
+  for i in range(len(Energies)):
+    Hist.Fill(Energies[i], Rates[i])
+
+  print "integrated rate:",Integral
+
+  return [Energies, Rates], Hist, Integral
+
+
+def WimpSignal2DEric(mass_of_wimp,sigma_ion,sigma_rec,spectrum):
+  denom_i=1./(2*pow(sigma_ion,2))
+  denom_r=1./(2*pow(sigma_rec,2))
+  hist = TH2F('wimp_signal_%sGeV'%mass_of_wimp,'WIMP signal %sGeV;E_{rec} (keVnr);E_{ion} (keVee);Rate (cts/kg*day)'%mass_of_wimp,Energy['rec']['bins'],Energy['rec']['min'],Energy['rec']['max'],Energy['ion']['bins'],Energy['ion']['min'],Energy['ion']['max'])
+  for recbin in range(1,hist.GetNbinsX()+1):
+    Erec = hist.GetXaxis().GetBinCenter(recbin)
+    for ionbin in range(1,hist.GetNbinsY()+1):
+      Eion = hist.GetYaxis().GetBinCenter(ionbin)
+      summe=0
+      for specbin in range(1,spectrum.GetNbinsX()+1):
+	ErecSpec = spectrum.GetXaxis().GetBinCenter(specbin)
+	Q = LindhardQuenching.Eval(ErecSpec)
+	wimprate = spectrum.GetBinContent(specbin)
+	tutu = denom_r*pow((Erec-ErecSpec),2)
+	kernel = TMath.exp(-tutu-denom_i*pow((Eion-Q*ErecSpec),2))
+	summe += (kernel*wimprate)
+      hist.SetBinContent(recbin,ionbin,0.02002*summe/(2*3.141592*sigma_rec*sigma_ion))
+  return hist
