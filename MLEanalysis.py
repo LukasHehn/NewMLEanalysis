@@ -6,22 +6,6 @@ import pyWIMP.DMModels.wimp_model as wimp_model
 from pyWIMP.DMModels.flat_model import FlatModel
 from pyWIMP.DMModels.base_model import BaseVariables
 
-def GetGammaCutEfficiency():
-  hist = TH2F('gamma_cut_efficiency', 'Gamma Cut Efficiency;E_{Rec} (keV_{nr});Efficiency', \
-                                      ID.fEnergyRecBinning.size-1, ID.fEnergyRecBinning.flatten('C'), ID.fEnergyIonBinning.size-1, ID.fEnergyIonBinning.flatten('C'))
-  ER_centroid.SetParameter(0,6.4)
-  for xbin in range(1,hist.GetNbinsX()+1):
-    Erec = hist.GetXaxis().GetBinCenter(xbin)
-    ioncut = ER_centroid.Eval(Erec)-0.9
-    for ybin in range(1,hist.GetNbinsY()+1):
-      Eion = hist.GetYaxis().GetBinCenter(ybin)
-      if Eion < ioncut:
-        hist.SetBinContent(xbin, ybin, 1)
-      else:
-        hist.SetBinContent(xbin, ybin, 0)
-  return hist
-
-
 def PerformMLEfit(mass_of_wimp,MC_Simulations):
   Results[mass_of_wimp] = {}
   result = Results[mass_of_wimp]
@@ -32,27 +16,28 @@ def PerformMLEfit(mass_of_wimp,MC_Simulations):
   # fit parameter
   this['ratio'] = RooRealVar('ratio_%sGeV'%mass_of_wimp,'ratio_%sGeV'%mass_of_wimp,ratio_range['start'],ratio_range['min'],ratio_range['max'])
 
+  # smearing in recoil
+  this['heat_mean'] = RooRealVar('heat_mean_%sGeV'%mass_of_wimp,'heat_mean',0)
+  this['heat_smearing'] = RooGaussian('heat_smearing_%sGeV'%mass_of_wimp,'heat_smearing',rec,this['heat_mean'],sigma_rec)
+  rec.setBins(10000,'fft')
+
   # position of bands
   this['ER_centroid'] = RooFormulaVar('ER_centroid_%sGeV'%mass_of_wimp,'@0*(1+(0.16*@0^0.18)*(@1/3))/(1+@1/3)',RooArgList(rec,voltage))
-  this['NR_centroid'] = RooFormulaVar('NR_centroid_%sGeV'%mass_of_wimp,'0.16*@0^1.18',RooArgList(rec))
+  #this['NR_centroid'] = RooFormulaVar('NR_centroid_%sGeV'%mass_of_wimp,'0.16*@0^1.18',RooArgList(rec))
 
   # gaussians in ionization energy with shifting mean in recoil energy
-  this['ion_gauss_ER'] = RooGaussian('ion_gauss_ER_%sGeV'%mass_of_wimp,'gauss with shifted mean',ion,this['ER_centroid'],fiducial_sigma)
-  this['ion_gauss_NR'] = RooGaussian('ion_gauss_NR_%sGeV'%mass_of_wimp,'gauss with shifted mean',ion,this['NR_centroid'],fiducial_sigma)
+  this['ion_gauss_ER'] = RooGaussian('ion_gauss_ER_%sGeV'%mass_of_wimp,'gauss with shifted mean',ion,this['ER_centroid'],sigma_ion)
+  #this['ion_gauss_NR'] = RooGaussian('ion_gauss_NR_%sGeV'%mass_of_wimp,'gauss with shifted mean',ion,this['NR_centroid'],sigma_ion)
 
   this['gamma_linear'] = RooPolynomial('gamma_linear_%sGeV'%mass_of_wimp,'linear gamma spectrum',ion)
   this['gamma_spectrum'] = this['gamma_linear']
 
-  this['pywimp_pdf'] = wm.get_WIMP_model_with_escape_vel(mass_of_wimp)
-  this['wimp_spectrum'] = this['pywimp_pdf']
-  result['f_norm'] = wm.get_normalization().getVal()
-  result['N_wimp'] = this['pywimp_pdf'].expectedEvents(RooArgSet(time,rec)) # number of expected events per nucleus cross section [pb] for detector mass in time and energy range
+  #this['pywimp_pdf'] = wm.get_WIMP_model_with_escape_vel(mass_of_wimp)
+  #this['wimp_spectrum'] = this['pywimp_pdf']
+  #result['f_norm'] = wm.get_normalization().getVal()
 
-  # heat convolution
-  this['heat_mean'] = RooRealVar('heat_mean_%sGeV'%mass_of_wimp,'heat_mean',0)
-  this['heat_smearing'] = RooGaussian('heat_smearing_%sGeV'%mass_of_wimp,'heat_smearing',rec,this['heat_mean'],heat_sigma)
-  rec.setBins(10000,'fft')
 
+  #result['N_wimp'] = this['pywimp_pdf'].expectedEvents(RooArgSet(time,rec)) # number of expected events per nucleus cross section [pb] for detector mass in time and energy range
 
   # background
   this['gamma_pdf'] = RooProdPdf('gamma_pdf_%sGeV'%mass_of_wimp,'gamma_pdf',this['gamma_spectrum'],this['ion_gauss_ER'])
@@ -63,22 +48,34 @@ def PerformMLEfit(mass_of_wimp,MC_Simulations):
   #this['wimp_spectrum_smeared'] = RooFFTConvPdf('wimp_spectrum_smeared_%sGeV'%mass_of_wimp,'wimp spectrum * heat gaussian',rec,this['wimp_spectrum'],this['heat_smearing'],2)
   #this['wimp_spectrum_smeared'].setBufferFraction(1.0)
   #this['final_wimp_pdf'] = RooProdPdf('final_wimp_pdf_%sGeV'%mass_of_wimp,'final_wimp_pdf',this['wimp_spectrum_smeared'],this['ion_gauss_NR'])
-  this['final_wimp_pdf'] = RooProdPdf('final_wimp_pdf_%sGeV'%mass_of_wimp,'final_wimp_pdf',this['wimp_spectrum'],this['ion_gauss_NR'])
+  #this['final_wimp_pdf'] = RooProdPdf('final_wimp_pdf_%sGeV'%mass_of_wimp,'final_wimp_pdf',this['wimp_spectrum'],this['ion_gauss_NR'])
+
+  # spectrum & signal histogram from Eric
+  notused, this['spectrum_hist'], this['integral'] = ReadInWimpSpectrumEric(mass_of_wimp)
+  this['wimp_hist'] = WimpSignal2DEric(mass_of_wimp,sigma_ion.getVal(),sigma_rec.getVal(),this['spectrum_hist'])
+  result['N_wimp'] = this['integral']*exposure
+
+  # scale to expected WIMP event count
+  this['wimp_hist'].Scale(result['N_wimp']/this['wimp_hist'].Integral('WIDTH'))
+  this['signal_hist'] = this['wimp_hist'].Clone('signal_hist_%sGeV'%mass_of_wimp)
+
+  # correct for detector efficiency
+  this['signal_hist'].Multiply(total_efficiency)
+
+  # remaining number of wimp events after efficiency correction
+  result['N_signal'] = this['signal_hist'].Integral('WIDTH')
 
 
   # efficiency correction
   this['gamma_hist'] = this['final_gamma_pdf'].createHistogram('gamma_hist_%sGeV'%mass_of_wimp,rec,RooFit.Binning(Energy['rec']['bins']),RooFit.YVar(ion,RooFit.Binning(Energy['ion']['bins'])))
 
-  this['wimp_hist'] = this['final_wimp_pdf'].createHistogram('wimp_hist_%sGeV'%mass_of_wimp,rec,RooFit.Binning(Energy['rec']['bins']),RooFit.YVar(ion,RooFit.Binning(Energy['ion']['bins'])))
-  this['wimp_hist'].Scale(result['N_wimp']/this['wimp_hist'].Integral('WIDTH'))
+  #this['wimp_hist'] = this['final_wimp_pdf'].createHistogram('wimp_hist_%sGeV'%mass_of_wimp,rec,RooFit.Binning(Energy['rec']['bins']),RooFit.YVar(ion,RooFit.Binning(Energy['ion']['bins'])))
+  #this['wimp_hist'].Scale(result['N_wimp']/this['wimp_hist'].Integral('WIDTH'))
 
   this['bckgd_hist'] = this['gamma_hist'].Clone('bckgd_hist_%sGeV'%mass_of_wimp);this['bckgd_hist'].Multiply(total_efficiency)
-  this['signal_hist'] = this['wimp_hist'].Clone('signal_hist_%sGeV'%mass_of_wimp);this['signal_hist'].Multiply(total_efficiency)
+  #this['signal_hist'] = this['wimp_hist'].Clone('signal_hist_%sGeV'%mass_of_wimp);this['signal_hist'].Multiply(total_efficiency)
 
-  #additional gamma cut correction
-  this['signal_hist'].Multiply(gamma_cut_efficiency)
-
-  result['N_signal'] = this['signal_hist'].Integral('WIDTH')
+  #result['N_signal'] = this['signal_hist'].Integral('WIDTH')
 
 
   # efficiency corrected histograms back to pdf
@@ -109,8 +106,7 @@ def PerformMLEfit(mass_of_wimp,MC_Simulations):
   result['ratio error high'] = this['ratio'].getErrorHi()
   result['upper ratio 90'] = result['ratio'] + 1.64*result['ratio error high']
   result['event limit'] = result['upper ratio 90'] * events
-  #result['cross section limit'] = result['f_norm'] * (result['event limit']/result['N_signal'])
-  result['cross section limit'] = result['f_norm'] * (2.35/result['N_signal'])
+  result['cross section limit'] = (result['event limit']/result['N_signal'])*pow(10,-6)
   return True
 
 
@@ -193,40 +189,16 @@ def PlotFitResults(mass_of_wimp,toydata):
   return c0
 
 
-def PlotExclusionCurve():
-  Exclusion['exclusion curve Eric'] = TGraph(len(EricsResults[DetectorName]))
-  Exclusion['exclusion curve MLE'] = TGraph(len(Results))
-  i = 0
-  for mass_of_wimp in EricsResults[DetectorName]:
-    Exclusion['exclusion curve Eric'].SetPoint(i, mass_of_wimp, EricsResults[DetectorName][mass_of_wimp])
-    i += 1
-  j = 0
-  for mass_of_wimp in Results:
-    Exclusion['exclusion curve MLE'].SetPoint(j, mass_of_wimp, Results[mass_of_wimp]['cross section limit'])
-    j += 1
-  c0 = TCanvas('canvas','Exclusion Plot',800,600)
-  #gPad.SetLogy()
-  Exclusion['exclusion curve Eric'].SetTitle('Exclusion Plot %s GeV' % DetectorName)
-  Exclusion['exclusion curve Eric'].Draw('ALP')
-  Exclusion['exclusion curve Eric'].GetYaxis().SetTitle('\sigma_{\chi - nucleon} [pb]')
-  Exclusion['exclusion curve Eric'].GetXaxis().SetTitle('m_{\chi } [GeV]')
-  Exclusion['exclusion curve Eric'].SetLineColor(kBlue)
-  Exclusion['exclusion curve Eric'].SetLineWidth(3)
-  Exclusion['exclusion curve MLE'].Draw('LP')
-  Exclusion['exclusion curve MLE'].SetLineColor(kRed)
-  Exclusion['exclusion curve MLE'].SetLineWidth(3)
-  return c0
-
-
 DetectorName = 'ID3'
 ID = Detector(DetectorName)
-total_efficiency = ID.GetProjectedEfficiency('total')
-gamma_cut_efficiency = GetGammaCutEfficiency()
+total_efficiency = ID.GetEnergyEfficiency()
+exposure = ID.GetExposure()
 
 ratio_range = {'min' : 0, 'max' : 1.0, 'start' : 0.0}
 
 # list of WIMP masses
-WIMP_Masses = [5,6,7,8,9,10,12,15,20,25,30]
+WIMP_Masses = [6,7,8,10,12,15,20,25,30]
+#WIMP_Masses = [10]
 
 # dictionaries
 Container = {}
@@ -244,15 +216,15 @@ rec.SetNameTitle('rec','E_{rec}')
 rec.setUnit('keV_{nr}')
 
 # detector specific parameters
-voltage = RooRealVar('voltage','applied voltage',ID.GetWeightedAverage('voltage'))
+voltage = RooRealVar('voltage','applied voltage',ID.GetAverageValue('voltage'))
 voltage.setConstant()
 
-heat_baseline_nr = GetEnergyRecoilFromEstimator(ID.GetWeightedAverage('heat'),voltage.getVal())
-heat_FWHM = RooRealVar('heat_FWHM','FWHM heat channel baseline',heat_baseline_nr)
-heat_sigma = RooFormulaVar('heat_sigma','heat channel baseline resolution','@0/sqrt(8*log(2))',RooArgList(heat_FWHM))
+FWHM_heat = ID.GetAverageValue('heat')
+FWHM_rec = RecoilResolutionFromHeat(FWHM_heat,voltage.getVal(),10)
+sigma_rec = RooRealVar('sigma_rec','recoil energy resolution',FWHM_rec/2.35)
 
-fiducial_FWHM = RooRealVar('fiducial_FWHM','FWHM fiducial electrode baseline',ID.GetWeightedAverage('fiducialmean'))
-fiducial_sigma = RooFormulaVar('fiducial_sigma','fiducial electrode baseline resolution','@0/sqrt(8*log(2))', RooArgList(fiducial_FWHM))
+FWHM_ion = ID.GetAverageValue('fiducialmean')
+sigma_ion = RooRealVar('sigma_ion','ionization energy resolution',FWHM_ion/2.35)
 
 # dataset
 realdata = RooDataSet.read('ID3-eventlist_test.txt',RooArgList(time,rec,ion))

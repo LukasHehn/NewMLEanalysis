@@ -44,8 +44,7 @@ exposure = ID.GetExposure()
 
 
 # list of WIMP masses
-WIMP_Masses = [8,10,15,30]
-#WIMP_Masses = [10]
+WIMP_Masses = [6,7,8,10,12,15,20,25,30]
 
 # dictionaries
 Container = {}

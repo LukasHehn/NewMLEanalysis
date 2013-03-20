@@ -198,7 +198,7 @@ class Detector:
       sigma_heat = FWHM_heat/2.35
 
       Threshhold_rec = GetEnergyRecoilFromEstimator(Threshhold_heat, voltage)
-      sigma_rec = RecoilResolutionFromHeatBaseline(sigma_heat,voltage,Threshhold_rec) #resolution at threshold energy
+      sigma_rec = RecoilResolutionFromHeat(sigma_heat,voltage,Threshhold_rec) #resolution at threshold energy
 
       EfficiencyCurve = TriggerEfficiency
       EfficiencyCurve.SetParameter(0, Threshhold_rec)
@@ -387,6 +387,27 @@ class Detector:
       return self.fProjectedFiducialEfficiency
 
 
+  #def GetAverageValue(self, name):
+    #if name == 'voltage': hist = self.fVoltage
+    #elif name == 'heat': hist = self.fHeatBaseline
+    #elif name == 'threshold': hist = self.fHeatThreshold
+    #elif name == 'fiducialtop': hist = self.fFiducialTopBaseline
+    #elif name == 'fiducialbottom': hist = self.fFiducialBottomBaseline
+    #elif name == 'fiducialmean': hist = self.fFiducialMeanBaseline
+    #elif name == 'vetotop': hist = self.fVetoTopBaseline
+    #elif name == 'vetobottom': hist = self.fVetoBottomBaseline
+    #elif name == 'guardtop': hist = self.fGuardTopBaseline
+    #elif name == 'guardbottom': hist = self.fGuardBottomBaseline
+
+    #Temp = 0.0
+    #for xbin in range(1,hist.GetNbinsX()+1):
+      #timewidth = hist.GetXaxis().GetBinWidth(xbin)
+      #value = hist.GetBinContent(xbin)
+      #Temp += timewidth * value
+    #Temp /= self.GetLivetime()
+    #return Temp
+
+
   def GetAverageValue(self, name):
     if name == 'voltage': hist = self.fVoltage
     elif name == 'heat': hist = self.fHeatBaseline
@@ -399,13 +420,7 @@ class Detector:
     elif name == 'guardtop': hist = self.fGuardTopBaseline
     elif name == 'guardbottom': hist = self.fGuardBottomBaseline
 
-    Temp = 0.0
-    for xbin in range(1,hist.GetNbinsX()+1):
-      timewidth = hist.GetXaxis().GetBinWidth(xbin)
-      value = hist.GetBinContent(xbin)
-      Temp += timewidth * value
-    Temp /= self.GetLivetime()
-    return Temp
+    return hist.Integral('WIDTH')/self.GetLivetime()
 
 
   def GetEventGraphEnergy(self):
