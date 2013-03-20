@@ -83,7 +83,7 @@ LindhardQuenching.SetTitle('Lindhard Quenching for Nuclear Recoils;E_{Recoil} [k
 
 
 # Recoil energy estimator for nuclear recoils
-RecoilEstimator = TF1('recoil_energy_estimator','(x/(1+[0]/[1]))*(1+[0]/[1]*0.16*x^0.18)', 0, 30)
+RecoilEstimator = TF1('recoil_energy_estimator','(x/(1+[0]/[1]))*(1+[0]/[1]*0.16*x^0.18)', 0, 20)
 RecoilEstimator.SetParName(0,'Voltage')
 RecoilEstimator.SetParName(1,'Creation Potential')
 RecoilEstimator.FixParameter(1,3.0)
@@ -92,7 +92,7 @@ RecoilEstimator.SetTitle('E_{Rec} estimator from E_{Heat};E_{Rec} [keV_{nr}];E_{
 
 
 # trigger efficiency from DAQ trigger threshold and resolution on heat channel
-TriggerEfficiency = TF1('trigger_efficiency','0.5*(1+ROOT::Math::erf(((x-[0])/([1]*sqrt(2)))))', 0, 30)
+TriggerEfficiency = TF1('trigger_efficiency','0.5*(1+ROOT::Math::erf(((x-[0])/([1]*sqrt(2)))))', 0, 20)
 #TriggerEfficiency.SetNpx(Energy['rec']['bins']*10)
 TriggerEfficiency.SetParName(0, 'Threshold')
 TriggerEfficiency.SetParName(1, 'Resolution')
@@ -100,7 +100,7 @@ TriggerEfficiency.SetTitle('Trigger Efficiency;E_{Heat} (keV);Efficiency')
 
 
 # measured fiducial efficiency (division of neutron histogram with/without fiducial cut)
-FiducialEfficiency = TF1('fiducial_efficiency','[2]*(1-exp([0]*(x-[1])))', 0, 30)
+FiducialEfficiency = TF1('fiducial_efficiency','[2]*(1-exp([0]*(x-[1])))', 0, 20)
 #FiducialEfficiency.SetNpx(Energy['ion']['bins']*10)
 FiducialEfficiency.SetParName(0,'Slope')
 FiducialEfficiency.SetParName(1,'Cut off')
@@ -108,9 +108,9 @@ FiducialEfficiency.SetParName(2,'Maximum')
 FiducialEfficiency.SetTitle('Fiducial Efficiency;E_{ion} (keV_{ee});Efficiency')
 
 # centroids of ER and NR band
-ER_centroid = TF1('ER_centroid','x*(1+(0.16*x^0.18)*([0]/3))/(1+[0]/3)',Energy['rec']['min'],Energy['rec']['max'])
+ER_centroid = TF1('ER_centroid','x*(1+(0.16*x^0.18)*([0]/3))/(1+[0]/3)',0,20)
 ER_centroid.SetParName(0,'voltage')
-NR_centroid = TF1('NR_centroid','0.16*x^1.18',Energy['rec']['min'],Energy['rec']['max'])
+NR_centroid = TF1('NR_centroid','0.16*x^1.18',0,20)
 
 
 # 95% C.L. gamma cut from Eric
@@ -182,7 +182,7 @@ def GetERAConstants(Detector):
   return constantDoc[Detector]
 
 
-def ReadInWimpSpectrum(mass_of_wimp):
+def ReadInWimpSpectrumEric(mass_of_wimp):
   basedir="/kalinka/home/hehn/PhD/LowMassEric/"
   filename=basedir+"wimpsignal_M"+str(mass_of_wimp)+".txt"
 
@@ -233,3 +233,19 @@ def WimpSignal2DEric(mass_of_wimp,sigma_ion,sigma_rec,spectrum):
 	summe += (kernel*wimprate)
       hist.SetBinContent(recbin,ionbin,0.02002*summe/(2*3.141592*sigma_rec*sigma_ion))
   return hist
+
+
+def GetGammaCutEfficiency(self,voltage):
+  GammaCutEfficiency = TH2F('gamma_cut_efficiency','Gamma Cut Efficiency;E_{Rec} (keV_{nr});E_{Ion} (keV_{nr});Efficiency',200,0,20,100,0,10)
+  hist = GammaCutEfficiency
+  ER_centroid.SetParameter(0,voltage)
+  for xbin in range(1,hist.GetNbinsX()+1):
+    Erec = hist.GetXaxis().GetBinCenter(xbin)
+    ioncut = ER_centroid.Eval(Erec)-offset
+    for ybin in range(1,hist.GetNbinsY()+1):
+      Eion = hist.GetYaxis().GetBinCenter(ybin)
+      if Eion < ioncut:
+	hist.SetBinContent(xbin, ybin, 1.0)
+      else:
+	hist.SetBinContent(xbin, ybin, 0.0)
+  return True

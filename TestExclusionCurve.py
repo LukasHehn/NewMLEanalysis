@@ -13,7 +13,7 @@ def Perform(mass_of_wimp):
   this = Container[mass_of_wimp]
 
   # spectrum & signal histogram
-  this['spectrum_list'], this['spectrum_hist'], this['integral'] = ReadInWimpSpectrum(mass_of_wimp)
+  this['spectrum_list'], this['spectrum_hist'], this['integral'] = ReadInWimpSpectrumEric(mass_of_wimp)
   this['wimp_hist'] = WimpSignal2DEric(mass_of_wimp,sigma_ion,sigma_rec,this['spectrum_hist'])
 
   result['N_wimp'] = this['integral']*exposure

@@ -70,21 +70,15 @@ class Detector:
                                       self.fEnergyRecBinning.size-1, self.fEnergyRecBinning.flatten('C'))
     self.fProjectedFiducialEfficiency = TH1F(self.fName+'_projected_fiducial_efficiency', self.fName+' Projected Fiducial Efficiency;E_{Ion} (keV_{ee});Efficiency', \
                                       self.fEnergyIonBinning.size-1, self.fEnergyIonBinning.flatten('C'))
-    self.fProjectedEnergyEfficiency = TH2F(self.fName+'_projected_energy_efficiency', self.fName+' Projected Energy Efficiency;E_{Rec} (keV_{nr});E_{Ion} (keV_{ee});Efficiency', \
+    self.fEnergyEfficiency = TH2F(self.fName+'_energy_efficiency', self.fName+' Energy Efficiency;E_{Rec} (keV_{nr});E_{Ion} (keV_{ee});Efficiency', \
                                       self.fEnergyRecBinning.size-1, self.fEnergyRecBinning.flatten('C'), self.fEnergyIonBinning.size-1, self.fEnergyIonBinning.flatten('C'))
-
-    self.fGammaCutEfficiency = TH2F(self.fName+'_gamma_cut_efficiency', self.fName+' Gamma Cut Efficiency;E_{Rec} (keV_{nr});E_{Ion} (keV_{nr});Efficiency', \
-                                  self.fEnergyRecBinning.size-1, self.fEnergyRecBinning.flatten('C'), self.fEnergyIonBinning.size-1, self.fEnergyIonBinning.flatten('C'))
 
 
     self._FillHistograms(self.fGoodUnixPeriods)
     self._CalcTriggerEfficiency()
     self._CalcFiducialEfficiency()
     self._CalcTotalEfficiency()
-
     self._CalcEnergyEfficiency()
-
-    self._CalcGammaCutEfficiency(0.9)
 
 
 
@@ -424,28 +418,9 @@ class Detector:
     return graph
 
 
-  def _CalcGammaCutEfficiency(self,offset):
-    hist = self.fGammaCutEfficiency
-    ER_centroid.SetParameter(0,6.4)
-    for xbin in range(1,hist.GetNbinsX()+1):
-      Erec = hist.GetXaxis().GetBinCenter(xbin)
-      ioncut = ER_centroid.Eval(Erec)-offset
-      for ybin in range(1,hist.GetNbinsY()+1):
-	Eion = hist.GetYaxis().GetBinCenter(ybin)
-	if Eion < ioncut:
-	  hist.SetBinContent(xbin, ybin, 1.0)
-	else:
-	  hist.SetBinContent(xbin, ybin, 0.0)
-    return True
-
-
-  def GetGammaCutEfficiency(self):
-    return self.fGammaCutEfficiency
-
-
   def _CalcEnergyEfficiency(self):
     inhist = self.fTotalEfficiency
-    outhist = self.fProjectedEnergyEfficiency
+    outhist = self.fEnergyEfficiency
 
     for zbin in range(1, inhist.GetNbinsZ()+1):
       for ybin in range(1, inhist.GetNbinsY()+1):
@@ -460,5 +435,5 @@ class Detector:
     return None
 
 
-  def GetProjectedEnergyEfficiency(self):
-    return self.fProjectedEnergyEfficiency
+  def GetEnergyEfficiency(self):
+    return self.fEnergyEfficiency

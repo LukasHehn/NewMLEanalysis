@@ -24,7 +24,7 @@ sigma_rec = FWHM_rec/2.35
 threshold_nr = GetEnergyRecoilFromEstimator(threshold_ee,voltage)
 
 
-List, Spectrum, Integral = ReadInWimpSpectrum(mass_of_wimp)
+List, Spectrum, Integral = ReadInWimpSpectrumEric(mass_of_wimp)
 Wimp_hist = WimpSignal2DEric(mass_of_wimp, sigma_ion,sigma_rec,Spectrum)
 Wimp_hist.Scale(Integral/Wimp_hist.Integral('WIDTH'))
 print "wimp hist integral",Wimp_hist.Integral('WIDTH')
