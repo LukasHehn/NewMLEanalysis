@@ -46,6 +46,6 @@ def FindKDataEvents(ID, KDataFile):
   infile.Close()
 
   return "KData: %i events read" % eventcounter
-  
+
   # save events to txt-file
-  #ID.WriteEventsToFile('ID3-eventlist.txt')
+  #ID.WriteEventsToFile('ID3-eventlist_new.txt')

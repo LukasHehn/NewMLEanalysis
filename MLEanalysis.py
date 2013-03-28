@@ -197,8 +197,8 @@ exposure = ID.GetExposure()
 ratio_range = {'min' : 0, 'max' : 1.0, 'start' : 0.0}
 
 # list of WIMP masses
-WIMP_Masses = [6,7,8,10,12,15,20,25,30]
-#WIMP_Masses = [10]
+#WIMP_Masses = [6,7,8,10,12,15,20,25,30]
+WIMP_Masses = [10]
 
 # dictionaries
 Container = {}
@@ -227,7 +227,7 @@ FWHM_ion = ID.GetAverageValue('fiducialmean')
 sigma_ion = RooRealVar('sigma_ion','ionization energy resolution',FWHM_ion/2.35)
 
 # dataset
-realdata = RooDataSet.read('ID3-eventlist_test.txt',RooArgList(time,rec,ion))
+realdata = RooDataSet.read('ID3-eventlist.txt',RooArgList(time,rec,ion))
 realdata_scatter = realdata.createHistogram(rec,ion)
 events = int(realdata.numEntries())
 
@@ -237,7 +237,7 @@ MC_Simulations = 0
 # loop over several wimp masses
 print 'fit results for {0} with {1} kg of mass'.format(DetectorName,ID.GetMass())
 print "-----------------------------------------------------------------"
-print '{0:8} | {1:8} | {2:8} | {3:8} | {4:8} | {5:8} | {6:8}'.format('m_chi','r','r_sigma','N_90','N_pywimp','N_signal','xs')
+print '{0:8} | {1:8} | {2:8} | {3:8} | {4:8} | {5:8} | {6:8}'.format('m_chi','r','r_sigma','N_90','N_wimp','N_signal','xs')
 for mass_of_wimp in WIMP_Masses:
   PerformMLEfit(mass_of_wimp,MC_Simulations)
   this = Container[mass_of_wimp]

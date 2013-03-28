@@ -38,13 +38,12 @@ def Perform(mass_of_wimp):
 
 DetectorName = 'ID3'
 ID = Detector(DetectorName)
-total_efficiency = ID.GetProjectedEnergyEfficiency()
-gamma_cut_efficiency = ID.GetGammaCutEfficiency()
+total_efficiency = ID.GetEnergyEfficiency()
 exposure = ID.GetExposure()
 
 
 # list of WIMP masses
-WIMP_Masses = [6,7,8,10,12,15,20,25,30]
+#WIMP_Masses = [6,7,8,10,12,15,20,25,30]
 
 # dictionaries
 Container = {}
@@ -62,7 +61,7 @@ voltage = ID.GetAverageValue('voltage')
 FWHM_heat = ID.GetAverageValue('heat')
 sigma_heat = FWHM_heat/2.35
 
-sigma_rec = RecoilResolutionFromHeatBaseline(sigma_heat,voltage,10)
+sigma_rec = RecoilResolutionFromHeat(sigma_heat,voltage,10)
 
 FWHM_ion = ID.GetAverageValue('fiducialmean')
 sigma_ion = FWHM_ion/2.35

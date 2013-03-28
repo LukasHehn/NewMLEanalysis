@@ -190,7 +190,7 @@ def ReadInWimpSpectrumEric(mass_of_wimp):
 
   Integral = 0
 
-  print "reading WIMP spectrum from:",filename
+  #print "reading WIMP spectrum from:",filename
 
   infile = open(filename,'r')
   for line in infile:
@@ -210,7 +210,7 @@ def ReadInWimpSpectrumEric(mass_of_wimp):
   for i in range(len(Energies)):
     Hist.Fill(Energies[i], Rates[i])
 
-  print "integrated rate:",Integral
+  #print "integrated rate:",Integral
 
   return [Energies, Rates], Hist, Integral
 
