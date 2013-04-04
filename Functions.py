@@ -188,31 +188,23 @@ def ReadInWimpSpectrumEric(mass_of_wimp):
 
   Energies,Rates = [], []
 
-  Integral = 0
-
   #print "reading WIMP spectrum from:",filename
 
   infile = open(filename,'r')
   for line in infile:
     energy, rate = line.split()
-    Integral += float(rate)
     Energies.append(float(energy))
     Rates.append(float(rate))
   infile.close()
 
-  DeltaE = Energies[1]-Energies[0]
-  Integral *= DeltaE
-
   Energybins = np.array(Energies, dtype=np.float)
 
-  Hist = TH1F('wimp_spectrum_%sGeV'%mass_of_wimp,'Spectrum for 10^{-6}pb and %sGeV;E_{recoil} [keV];Rate [evts/kg day 0.02keV]'%mass_of_wimp,Energybins.size-1, Energybins.flatten('C'))
+  Hist = TH1F('wimp_spectrum_%sGeV'%mass_of_wimp,'Spectrum Eric %sGeV;E_{recoil} [keV];Rate [evts/kg/day/0.02keV]'%mass_of_wimp,Energybins.size-1, Energybins.flatten('C'))
 
   for i in range(len(Energies)):
     Hist.Fill(Energies[i], Rates[i])
 
-  #print "integrated rate:",Integral
-
-  return [Energies, Rates], Hist, Integral
+  return Hist
 
 
 def WimpSignal2DEric(mass_of_wimp,sigma_ion,sigma_rec,spectrum):
