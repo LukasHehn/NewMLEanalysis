@@ -73,7 +73,7 @@ def date_to_unixtime(date):
 
 
 # Lindhard quenching relation (nuclear recoil)
-LindhardQuenching = TF1('lindhard_quenching','[0]*(x^[1])', 0, 20)
+LindhardQuenching = TF1('lindhard_quenching','[0]*(x^[1])', 0, 30)
 LindhardQuenching.SetParName(0,'a')
 LindhardQuenching.SetParName(1,'b')
 LindhardQuenching.FixParameter(0, 0.16)
@@ -83,7 +83,7 @@ LindhardQuenching.SetTitle('Lindhard Quenching for Nuclear Recoils;E_{Recoil} [k
 
 
 # Recoil energy estimator for nuclear recoils
-RecoilEstimator = TF1('recoil_energy_estimator','(x/(1+[0]/[1]))*(1+[0]/[1]*0.16*x^0.18)', 0, 20)
+RecoilEstimator = TF1('recoil_energy_estimator','(x/(1+[0]/[1]))*(1+[0]/[1]*0.16*x^0.18)', 0, 30)
 RecoilEstimator.SetParName(0,'Voltage')
 RecoilEstimator.SetParName(1,'Creation Potential')
 RecoilEstimator.FixParameter(1,3.0)
@@ -92,7 +92,7 @@ RecoilEstimator.SetTitle('E_{Rec} estimator from E_{Heat};E_{Rec} [keV_{nr}];E_{
 
 
 # trigger efficiency from DAQ trigger threshold and resolution on heat channel
-TriggerEfficiency = TF1('trigger_efficiency','0.5*(1+ROOT::Math::erf(((x-[0])/([1]*sqrt(2)))))', 0, 20)
+TriggerEfficiency = TF1('trigger_efficiency','0.5*(1+ROOT::Math::erf(((x-[0])/([1]*sqrt(2)))))', 0, 30)
 #TriggerEfficiency.SetNpx(Energy['rec']['bins']*10)
 TriggerEfficiency.SetParName(0, 'Threshold')
 TriggerEfficiency.SetParName(1, 'Resolution')
@@ -100,7 +100,7 @@ TriggerEfficiency.SetTitle('Trigger Efficiency;E_{Heat} (keV);Efficiency')
 
 
 # measured fiducial efficiency (division of neutron histogram with/without fiducial cut)
-FiducialEfficiency = TF1('fiducial_efficiency','[2]*(1-exp([0]*(x-[1])))', 0, 20)
+FiducialEfficiency = TF1('fiducial_efficiency','[2]*(1-exp([0]*(x-[1])))', 0, 30)
 #FiducialEfficiency.SetNpx(Energy['ion']['bins']*10)
 FiducialEfficiency.SetParName(0,'Slope')
 FiducialEfficiency.SetParName(1,'Cut off')
@@ -108,13 +108,13 @@ FiducialEfficiency.SetParName(2,'Maximum')
 FiducialEfficiency.SetTitle('Fiducial Efficiency;E_{ion} (keV_{ee});Efficiency')
 
 # centroids of ER and NR band
-ER_centroid = TF1('ER_centroid','x*(1+(0.16*x^0.18)*([0]/3))/(1+[0]/3)',0,20)
+ER_centroid = TF1('ER_centroid','x*(1+(0.16*x^0.18)*([0]/3))/(1+[0]/3)',0,30)
 ER_centroid.SetParName(0,'voltage')
-NR_centroid = TF1('NR_centroid','0.16*x^1.18',0,20)
+NR_centroid = TF1('NR_centroid','0.16*x^1.18',0,30)
 
 
 # 95% C.L. gamma cut from Eric
-GammaCut = TF1('gamma_cut','x*((1+[0]*[1]/[2])/(1+[1]/[2]))+1.96*sqrt([3]^2+[4]^2*((1+[0]*[1]/[2])/(1+[1]/[2]))^2)',Energy['rec']['min'],Energy['rec']['max'])
+GammaCut = TF1('gamma_cut','x*((1+[0]*[1]/[2])/(1+[1]/[2]))+1.96*sqrt([3]^2+[4]^2*((1+[0]*[1]/[2])/(1+[1]/[2]))^2)',0,30)
 GammaCut.SetNpx(1000)
 GammaCut.SetParName(0,'Mean Quenching Factor')
 GammaCut.FixParameter(0, 0.24)
