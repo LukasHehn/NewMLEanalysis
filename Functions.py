@@ -108,6 +108,14 @@ FiducialEfficiency.SetParName(2,'Maximum')
 FiducialEfficiency.SetTitle('Fiducial Efficiency;E_{ion} (keV_{ee});Efficiency')
 
 # centroids of ER and NR band
+def ER_centroid_function(x, par):
+      xx =x[0]
+      f = xx*(1+(0.16*xx**(0.18+0j))*(par[0]/3))/(1+par[0]/3)
+      return f.real
+
+ER_centroid_real = TF1("ER_centroid_real", ER_centroid_function, -10, 30, 1)
+ER_centroid_real.SetParameter(0, 6.4)
+
 ER_centroid = TF1('ER_centroid','x*(1+(0.16*x^0.18)*([0]/3))/(1+[0]/3)',0,30)
 ER_centroid.SetParName(0,'voltage')
 NR_centroid = TF1('NR_centroid','0.16*x^1.18',0,30)
@@ -224,6 +232,52 @@ def WimpSignal2DEric(mass_of_wimp,sigma_ion,sigma_rec,spectrum):
 	kernel = TMath.exp(-tutu-denom_i*pow((Eion-Q*ErecSpec),2))
 	summe += (kernel*wimprate)
       hist.SetBinContent(recbin,ionbin,0.02002*summe/(2*3.141592*sigma_rec*sigma_ion))
+  return hist
+
+
+def FlatGammaBckgd2DEric(sigma_ion,sigma_rec):
+  denom_i=1./(2*sigma_ion**2)
+  denom_r=1./(2*sigma_rec**2)
+  spectrum = TH1F('flat_gamma_spectrum','flat gamma spectrum',Energy['rec']['bins'],Energy['rec']['min'],Energy['rec']['max'])
+  hist = TH2F('flat_gamma_bckgd','Flat Gamma Bckgd;E_{rec} (keVnr);E_{ion} (keVee);Rate (cts/kg*day)',Energy['rec']['bins'],Energy['rec']['min'],Energy['rec']['max'],Energy['ion']['bins'],Energy['ion']['min'],Energy['ion']['max'])
+  for recbin in range(1,hist.GetNbinsX()+1):
+    Erec = hist.GetXaxis().GetBinCenter(recbin)
+    for ionbin in range(1,hist.GetNbinsY()+1):
+      Eion = hist.GetYaxis().GetBinCenter(ionbin)
+      summe=0
+      for specbin in range(1,spectrum.GetNbinsX()+1):
+	ErecSpec = spectrum.GetXaxis().GetBinCenter(specbin)
+	EionSpec = ER_centroid_real.Eval(ErecSpec)
+	tutu = denom_r*(Erec-ErecSpec)**2
+	kernel = TMath.exp(-tutu-denom_i*(Eion-EionSpec)**2)
+	summe += kernel
+	print ErecSpec, EionSpec, kernel, summe
+      hist.SetBinContent(recbin,ionbin,summe)
+  return hist
+
+
+def Simple2DEfficiencyID3():
+  hist = TH2F('efficiency','efficiency;E_{rec} (keVnr);E_{ion} (keVee);Efficiency',Energy['rec']['bins'],Energy['rec']['min'],Energy['rec']['max'],Energy['ion']['bins'],Energy['ion']['min'],Energy['ion']['max'])
+
+  TriggerEfficiency.SetParameter(0, 3.874)
+  TriggerEfficiency.SetParameter(1, 0.82)
+  FiducialEfficiency.SetParameter(0, -1.876)
+  FiducialEfficiency.SetParameter(1, 1.247)
+  FiducialEfficiency.SetParameter(2, 0.947)
+
+  for recbin in range(1,hist.GetNbinsX()+1):
+    Erec = hist.GetXaxis().GetBinCenter(recbin)
+    eff_trigger = TriggerEfficiency.Eval(Erec)
+    for ionbin in range(1,hist.GetNbinsY()+1):
+      Eion = hist.GetYaxis().GetBinCenter(ionbin)
+      eff_fiducial = FiducialEfficiency.Eval(Eion)
+
+      if eff_trigger >= 0 and eff_fiducial >= 0:
+	eff_total = eff_trigger * eff_fiducial
+      else:
+	eff_total = 0
+      hist.SetBinContent(recbin,ionbin,eff_total)
+      hist.SetBinError(recbin,ionbin,0)
   return hist
 
 

@@ -51,7 +51,8 @@ def PerformMLEfit(mass_of_wimp,MC_Simulations):
   #this['final_wimp_pdf'] = RooProdPdf('final_wimp_pdf_%sGeV'%mass_of_wimp,'final_wimp_pdf',this['wimp_spectrum'],this['ion_gauss_NR'])
 
   # spectrum & signal histogram from Eric
-  notused, this['spectrum_hist'], this['integral'] = ReadInWimpSpectrumEric(mass_of_wimp)
+  this['spectrum_hist'] = ReadInWimpSpectrumEric(mass_of_wimp)
+  this['integral'] = this['spectrum_hist'].Integral()
   this['wimp_hist'] = WimpSignal2DEric(mass_of_wimp,sigma_ion.getVal(),sigma_rec.getVal(),this['spectrum_hist'])
   result['N_wimp'] = this['integral']*exposure
 
