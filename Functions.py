@@ -251,7 +251,6 @@ def FlatGammaBckgd2DEric(sigma_ion,sigma_rec):
 	tutu = denom_r*(Erec-ErecSpec)**2
 	kernel = TMath.exp(-tutu-denom_i*(Eion-EionSpec)**2)
 	summe += kernel
-	print ErecSpec, EionSpec, kernel, summe
       hist.SetBinContent(recbin,ionbin,summe)
   return hist
 
