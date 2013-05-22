@@ -29,7 +29,7 @@ sigma_ion = RooRealVar('sigma_ion','ionization energy resolution',FWHM_ion/2.35)
 
 
 # dataset
-realdata = RooDataSet.read('ID3-eventlist_30keV.txt',RooArgList(time,rec,ion))
+realdata = RooDataSet.read('ID3-eventlist_30keV_cut.txt',RooArgList(time,rec,ion))
 realdata_scatter = realdata.createHistogram(rec,ion)
 events = int(realdata.numEntries())
 
@@ -42,11 +42,11 @@ rec.setBins(10000,'fft')
 # position of bands
 #ER_centroid = RooFormulaVar('ER_centroid','@0*(1+(0.16*@0^0.18)*(@1/3))/(1+@1/3)',RooArgList(rec,voltage))
 #ER_centroid = RooFormulaVar('ER_centroid','0.5*@0',RooArgList(rec))
-ER_centroid = RooFit.bindFunction(ER_centroid_real,rec,RooArgList(voltage)) #use only real defined function for Electron Recoil centroid
-NR_centroid = RooFormulaVar('NR_centroid','0.16*@0^1.18',RooArgList(rec))
+#ER_centroid = RooFit.bindFunction(ER_centroid_real,rec,RooArgList(voltage)) #use only real defined function for Electron Recoil centroid
+#NR_centroid = RooFormulaVar('NR_centroid','0.16*@0^1.18',RooArgList(rec))
 
 # gaussians in ionization energy with shifting mean in recoil energy
-ion_gauss_ER = RooGaussian('ion_gauss_ER','gauss with shifted mean',ion,ER_centroid,sigma_ion)
+#ion_gauss_ER = RooGaussian('ion_gauss_ER','gauss with shifted mean',ion,ER_centroid,sigma_ion)
 
 
 # -----------------------------------------------------------------------------------------
@@ -127,6 +127,9 @@ flat_gamma_bckgd_datahist = RooDataHist('flat_gamma_bckgd_datahist','flat_gamma_
 flat_gamma_bckgd_pdf = RooHistPdf('flat_gamma_bckgd_pdf','flat_gamma_bckgd_pdf',RooArgSet(rec,ion),flat_gamma_bckgd_datahist)
 
 combined_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList(V49_peak_pdf, Cr51_peak_pdf, Mn54_peak_pdf, Fe55_peak_pdf, Co56_peak_pdf, Zn65_peak_pdf, Ge68_peak_pdf, Ge68_2_peak_pdf, flat_gamma_bckgd_pdf),RooArgList(V49_peak_coeff, Cr51_peak_coeff, Mn54_peak_coeff, Fe55_peak_coeff, Co56_peak_coeff, Zn65_peak_coeff, Ge68_peak_coeff, Ge68_2_peak_coeff),kTRUE)
+
+#selected_peaks_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList(V49_peak_pdf, Fe55_peak_pdf, Co56_peak_pdf, Zn65_peak_pdf, Ge68_peak_pdf, Ge68_2_peak_pdf, flat_gamma_bckgd_pdf),RooArgList(V49_peak_coeff, Fe55_peak_coeff, Co56_peak_coeff, Zn65_peak_coeff, Ge68_peak_coeff, Ge68_2_peak_coeff),kTRUE)
+
 final_gamma_bckgd_pdf = combined_bckgd_pdf
 
 # maximum likelihood fit to data
@@ -134,22 +137,28 @@ nll = RooNLLVar('nll_background_only','nll background only',final_gamma_bckgd_pd
 minuit = RooMinuit(nll)
 fitresults = minuit.fit('hvr')
 
+# Monte Carlo
+MC_study = RooMCStudy(final_gamma_bckgd_pdf,RooArgSet(rec,ion))
+MC_study.generateAndFit(1000,events,kTRUE)
+nllframe = MC_study.plotNLL()
+
+
 
 # histogram
 gamma_bckgd_hist = final_gamma_bckgd_pdf.createHistogram('final_gamma_bckgd_hist',rec,RooFit.Binning(int((rec.getMax()-rec.getMin())*10)),RooFit.YVar(ion,RooFit.Binning(int((ion.getMax()-ion.getMin())*10))))
 
 
-recbins = int((rec.getMax()-rec.getMin())*6)
-ionbins = int((ion.getMax()-ion.getMin())*8)
+recbins = int((rec.getMax()-rec.getMin())*5)
+ionbins = int((ion.getMax()-ion.getMin())*5)
 
 
 # RooFit frames
 recframe = rec.frame()
 realdata.plotOn(recframe, RooFit.Name("data"), RooFit.Binning(recbins))
 final_gamma_bckgd_pdf.plotOn(recframe, RooFit.Name('model'), RooFit.LineColor(kBlue))
-#final_gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("V49_peak_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineStyle(kDashed))
+final_gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("V49_peak_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineStyle(kDashed))
 final_gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("Cr51_peak_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineStyle(kDashed))
-#final_gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("Mn54_peak_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineStyle(kDashed))
+final_gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("Mn54_peak_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineStyle(kDashed))
 final_gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("Fe55_peak_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineStyle(kDashed))
 final_gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("Co56_peak_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineStyle(kDashed))
 final_gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("Zn65_peak_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineStyle(kDashed))
@@ -160,9 +169,9 @@ print recframe.chiSquare("model", "data", 9)
 ionframe = ion.frame()
 realdata.plotOn(ionframe, RooFit.Name('data'), RooFit.Binning(ionbins))
 final_gamma_bckgd_pdf.plotOn(ionframe, RooFit.Name('model'), RooFit.LineColor(kBlue))
-#final_gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("V49_peak_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineStyle(kDashed))
+final_gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("V49_peak_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineStyle(kDashed))
 final_gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("Cr51_peak_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineStyle(kDashed))
-#final_gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("Mn54_peak_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineStyle(kDashed))
+final_gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("Mn54_peak_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineStyle(kDashed))
 final_gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("Fe55_peak_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineStyle(kDashed))
 final_gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("Co56_peak_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineStyle(kDashed))
 final_gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("Zn65_peak_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineStyle(kDashed))
@@ -175,16 +184,19 @@ print ionframe.chiSquare("model", "data", 9)
 c0 = TCanvas('c0','gamma band',1000,750)
 c0.Divide(2,2)
 c0.cd(1)
-gamma_bckgd_hist.Draw('COLZ')
+gamma_bckgd_hist.Draw('CONT4')
 realdata_scatter.Draw('SAMES')
 realdata_scatter.SetMarkerColor(kBlack)
 realdata_scatter.SetMarkerStyle(kPlus)
 realdata_scatter.SetMarkerSize(0.8)
-ER = ER_centroid.asTF(RooArgList(rec))
+#ER = ER_centroid.asTF(RooArgList(rec))
+ER = ER_centroid
+ER.SetParameter(0,6.4)
 ER.Draw('SAMES')
 ER.SetLineColor(kWhite)
 ER.SetLineWidth(2)
-NR = NR_centroid.asTF(RooArgList(rec))
+#NR = NR_centroid.asTF(RooArgList(rec))
+NR = NR_centroid
 NR.Draw('SAMES')
 NR.SetLineColor(kWhite)
 NR.SetLineWidth(2)
@@ -193,7 +205,8 @@ ionframe.Draw()
 c0.cd(3)
 recframe.Draw()
 c0.cd(4)
-flat_gamma_bckgd_hist.Draw('COLZ0')
-realdata_scatter.Draw('SAMES')
-ER.DrawCopy('SAMES')
-NR.DrawCopy('SAMES')
+line = TLine()
+line.SetLineWidth(2)
+line.SetLineColor(kRed)
+nllframe.Draw()
+line.DrawLine(nll.getVal(),gPad.GetUymin(),nll.getVal(),gPad.GetUymax())
