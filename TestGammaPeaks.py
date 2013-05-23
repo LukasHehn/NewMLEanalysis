@@ -30,14 +30,14 @@ sigma_ion = RooRealVar('sigma_ion','ionization energy resolution',FWHM_ion/2.35)
 
 # dataset
 realdata = RooDataSet.read('ID3-eventlist_30keV_cut.txt',RooArgList(time,rec,ion))
-realdata_scatter = realdata.createHistogram(rec,ion)
+realdata_scatter = realdata.createHistogram(rec,ion,(rec.getMax()-rec.getMin())*10,(ion.getMax()-ion.getMin())*10)
 events = int(realdata.numEntries())
 
 
-# smearing in recoil
-mean_rec = RooRealVar('mean_rec','mean_rec mean',0)
-recoil_smearing = RooGaussian('recoil_smearing','recoil_smearing',rec,mean_rec,sigma_rec)
-rec.setBins(10000,'fft')
+## smearing in recoil
+#mean_rec = RooRealVar('mean_rec','mean_rec mean',0)
+#recoil_smearing = RooGaussian('recoil_smearing','recoil_smearing',rec,mean_rec,sigma_rec)
+#rec.setBins(10000,'fft')
 
 # position of bands
 #ER_centroid = RooFormulaVar('ER_centroid','@0*(1+(0.16*@0^0.18)*(@1/3))/(1+@1/3)',RooArgList(rec,voltage))
@@ -61,6 +61,7 @@ V49_peak_rec_pos = RooFormulaVar('V49_peak_rec_pos','@0*@2*(1+@1/3)/(1+0.24*(@1/
 V49_peak_rec = RooGaussian('V49_peak_rec_pdf','V49_peak_rec_pdf with shifted mean',rec,V49_peak_rec_pos,sigma_rec)
 V49_peak_pdf = RooProdPdf('V49_peak_pdf','5keV peak',V49_peak_ion,V49_peak_rec)
 V49_peak_coeff = RooRealVar('V49_peak_coeff','scaling factor of 5keV peak',0.5,0.0,1.0)
+n_V49 = RooRealVar('n_V49','events for 49V peak',0.,0.,1000.0)
 
 Cr51_peak_ion_energy = RooRealVar('Cr51_peak_ion_energy','Cr51_peak_ion_energy',5.46)
 Cr51_peak_ion_pos = RooFormulaVar('Cr51_peak_ion_pos','@0*@1',RooArgList(Cr51_peak_ion_energy,energy_correction_ion))
@@ -69,6 +70,7 @@ Cr51_peak_rec_pos = RooFormulaVar('Cr51_peak_rec_pos','@0*@2*(1+@1/3)/(1+0.24*(@
 Cr51_peak_rec = RooGaussian('Cr51_peak_rec_pdf','Cr51_peak_rec_pdf with shifted mean',rec,Cr51_peak_rec_pos,sigma_rec)
 Cr51_peak_pdf = RooProdPdf('Cr51_peak_pdf','5keV peak',Cr51_peak_ion,Cr51_peak_rec)
 Cr51_peak_coeff = RooRealVar('Cr51_peak_coeff','scaling factor of 5keV peak',0.5,0.0,1.0)
+n_Cr51 = RooRealVar('n_Cr51','events for 51Cr peak',0.,0.,1000.0)
 
 Mn54_peak_ion_energy = RooRealVar('Mn54_peak_ion_energy','Mn54_peak_ion_energy',5.99)
 Mn54_peak_ion_pos = RooFormulaVar('Mn54_peak_ion_pos','@0*@1',RooArgList(Mn54_peak_ion_energy,energy_correction_ion))
@@ -77,6 +79,7 @@ Mn54_peak_rec_pos = RooFormulaVar('Mn54_peak_rec_pos','@0*@2*(1+@1/3)/(1+0.24*(@
 Mn54_peak_rec = RooGaussian('Mn54_peak_rec_pdf','Mn54_peak_rec_pdf with shifted mean',rec,Mn54_peak_rec_pos,sigma_rec)
 Mn54_peak_pdf = RooProdPdf('Mn54_peak_pdf','5keV peak',Mn54_peak_ion,Mn54_peak_rec)
 Mn54_peak_coeff = RooRealVar('Mn54_peak_coeff','scaling factor of 5keV peak',0.5,0.0,1.0)
+n_Mn54 = RooRealVar('n_Mn54','events for 54Mn peak',0.,0.,1000.0)
 
 Fe55_peak_ion_energy = RooRealVar('Fe55_peak_ion_energy','Fe55_peak_ion_energy',6.54)
 Fe55_peak_ion_pos = RooFormulaVar('Fe55_peak_ion_pos','@0*@1',RooArgList(Fe55_peak_ion_energy,energy_correction_ion))
@@ -85,6 +88,7 @@ Fe55_peak_rec_pos = RooFormulaVar('Fe55_peak_rec_pos','@0*@2*(1+@1/3)/(1+0.24*(@
 Fe55_peak_rec = RooGaussian('Fe55_peak_rec_pdf','Fe55_peak_rec_pdf with shifted mean',rec,Fe55_peak_rec_pos,sigma_rec)
 Fe55_peak_pdf = RooProdPdf('Fe55_peak_pdf','6keV peak',Fe55_peak_ion,Fe55_peak_rec)
 Fe55_peak_coeff = RooRealVar('Fe55_peak_coeff','scaling factor of 6keV peak',0.5,0.0,1.0)
+n_Fe55 = RooRealVar('n_Fe55','events for 55Fe peak',0.,0.,1000.0)
 
 Co56_peak_ion_energy = RooRealVar('Co56_peak_ion_energy','Co56_peak_ion_energy',7.11)
 Co56_peak_ion_pos = RooFormulaVar('Co56_peak_ion_pos','@0*@1',RooArgList(Co56_peak_ion_energy,energy_correction_ion))
@@ -93,6 +97,7 @@ Co56_peak_rec_pos = RooFormulaVar('Co56_peak_rec_pos','@0*@2*(1+@1/3)/(1+0.24*(@
 Co56_peak_rec = RooGaussian('Co56_peak_rec_pdf','Co56_peak_rec_pdf with shifted mean',rec,Co56_peak_rec_pos,sigma_rec)
 Co56_peak_pdf = RooProdPdf('Co56_peak_pdf','7keV peak',Co56_peak_ion,Co56_peak_rec)
 Co56_peak_coeff = RooRealVar('Co56_peak_coeff','scaling factor of 7keV peak',0.5,0.0,1.0)
+n_Co56 = RooRealVar('n_Co56','events for 56Co peak',0.,0.,1000.0)
 
 Zn65_peak_ion_energy = RooRealVar('Zn65_peak_ion_energy','Zn65_peak_ion_energy',8.98)
 Zn65_peak_ion_pos = RooFormulaVar('Zn65_peak_ion_pos','@0*@1',RooArgList(Zn65_peak_ion_energy,energy_correction_ion))
@@ -101,6 +106,7 @@ Zn65_peak_rec_pos = RooFormulaVar('Zn65_peak_rec_pos','@0*@2*(1+@1/3)/(1+0.24*(@
 Zn65_peak_rec = RooGaussian('Zn65_peak_rec_pdf','Zn65_peak_rec_pdf with shifted mean',rec,Zn65_peak_rec_pos,sigma_rec)
 Zn65_peak_pdf = RooProdPdf('Zn65_peak_pdf','9keV peak',Zn65_peak_ion,Zn65_peak_rec)
 Zn65_peak_coeff = RooRealVar('Zn65_peak_coeff','scaling factor of 9keV peak',0.5,0.0,1.0)
+n_Zn65 = RooRealVar('n_Zn65','events for 65Zn peak',0.,0.,1000.0)
 
 Ge68_peak_ion_energy = RooRealVar('Ge68_peak_ion_energy','Ge68_peak_ion_energy',10.37)
 Ge68_peak_ion_pos = RooFormulaVar('Ge68_peak_ion_pos','@0*@1',RooArgList(Ge68_peak_ion_energy,energy_correction_ion))
@@ -109,6 +115,7 @@ Ge68_peak_rec_pos = RooFormulaVar('Ge68_peak_rec_pos','@0*@2*(1+@1/3)/(1+0.24*(@
 Ge68_peak_rec = RooGaussian('Ge68_peak_rec_pdf','Ge68_peak_rec_pdf with shifted mean',rec,Ge68_peak_rec_pos,sigma_rec)
 Ge68_peak_pdf = RooProdPdf('Ge68_peak_pdf','10keV peak',Ge68_peak_ion,Ge68_peak_rec)
 Ge68_peak_coeff = RooRealVar('Ge68_peak_coeff','scaling factor of 10keV peak',0.5,0.0,1.0)
+n_Ge68 = RooRealVar('n_Ge68','events for 68Ge peak',0.,0.,1000.0)
 
 Ge68_2_peak_ion_energy = RooRealVar('Ge68_2_peak_ion_energy','Ge68_2_peak_ion_energy',9.66)
 Ge68_2_peak_ion_pos = RooFormulaVar('Ge68_2_peak_ion_pos','@0*@1',RooArgList(Ge68_2_peak_ion_energy,energy_correction_ion))
@@ -117,6 +124,9 @@ Ge68_2_peak_rec_pos = RooFormulaVar('Ge68_2_peak_rec_pos','@0*@2*(1+@1/3)/(1+0.2
 Ge68_2_peak_rec = RooGaussian('Ge68_2_peak_rec_pdf','Ge68_2_peak_rec_pdf with shifted mean',rec,Ge68_2_peak_rec_pos,sigma_rec)
 Ge68_2_peak_pdf = RooProdPdf('Ge68_2_peak_pdf','96keV peak',Ge68_2_peak_ion,Ge68_2_peak_rec)
 Ge68_2_peak_coeff = RooRealVar('Ge68_2_peak_coeff','scaling factor of 96keV peak',0.5,0.0,1.0)
+n_Ge68_small = RooFormulaVar('n_Ge68_small','0.1*@0',RooArgList(n_Ge68))
+
+n_flat = RooRealVar('n_flat','events flat spectrum',0.,0.,1000.0)
 # -----------------------------------------------------------------------------------------
 
 
@@ -126,21 +136,24 @@ flat_gamma_bckgd_hist.Multiply(total_efficiency)
 flat_gamma_bckgd_datahist = RooDataHist('flat_gamma_bckgd_datahist','flat_gamma_bckgd_datahist',RooArgList(rec,ion),flat_gamma_bckgd_hist)
 flat_gamma_bckgd_pdf = RooHistPdf('flat_gamma_bckgd_pdf','flat_gamma_bckgd_pdf',RooArgSet(rec,ion),flat_gamma_bckgd_datahist)
 
-combined_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList(V49_peak_pdf, Cr51_peak_pdf, Mn54_peak_pdf, Fe55_peak_pdf, Co56_peak_pdf, Zn65_peak_pdf, Ge68_peak_pdf, Ge68_2_peak_pdf, flat_gamma_bckgd_pdf),RooArgList(V49_peak_coeff, Cr51_peak_coeff, Mn54_peak_coeff, Fe55_peak_coeff, Co56_peak_coeff, Zn65_peak_coeff, Ge68_peak_coeff, Ge68_2_peak_coeff),kTRUE)
+#combined_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList(V49_peak_pdf, Cr51_peak_pdf, Mn54_peak_pdf, Fe55_peak_pdf, Co56_peak_pdf, Zn65_peak_pdf, Ge68_peak_pdf, Ge68_2_peak_pdf, flat_gamma_bckgd_pdf),RooArgList(V49_peak_coeff, Cr51_peak_coeff, Mn54_peak_coeff, Fe55_peak_coeff, Co56_peak_coeff, Zn65_peak_coeff, Ge68_peak_coeff, Ge68_2_peak_coeff),kTRUE)
 
 #selected_peaks_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList(V49_peak_pdf, Fe55_peak_pdf, Co56_peak_pdf, Zn65_peak_pdf, Ge68_peak_pdf, Ge68_2_peak_pdf, flat_gamma_bckgd_pdf),RooArgList(V49_peak_coeff, Fe55_peak_coeff, Co56_peak_coeff, Zn65_peak_coeff, Ge68_peak_coeff, Ge68_2_peak_coeff),kTRUE)
 
-final_gamma_bckgd_pdf = combined_bckgd_pdf
+extended_model = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList(V49_peak_pdf, Cr51_peak_pdf, Mn54_peak_pdf, Fe55_peak_pdf, Co56_peak_pdf, Zn65_peak_pdf, Ge68_peak_pdf, Ge68_2_peak_pdf, flat_gamma_bckgd_pdf),RooArgList(n_V49, n_Cr51, n_Mn54, n_Fe55, n_Co56, n_Zn65, n_Ge68, n_Ge68_small))
 
-# maximum likelihood fit to data
-nll = RooNLLVar('nll_background_only','nll background only',final_gamma_bckgd_pdf,realdata,RooFit.PrintEvalErrors(2))
-minuit = RooMinuit(nll)
-fitresults = minuit.fit('hvr')
+final_gamma_bckgd_pdf = extended_model
+final_gamma_bckgd_pdf.fitTo(realdata)#,RooFit.Extended(kTRUE))
 
-# Monte Carlo
-MC_study = RooMCStudy(final_gamma_bckgd_pdf,RooArgSet(rec,ion))
-MC_study.generateAndFit(1000,events,kTRUE)
-nllframe = MC_study.plotNLL()
+## maximum likelihood fit to data
+#nll = RooNLLVar('nll_background_only','nll background only',final_gamma_bckgd_pdf,realdata,RooFit.PrintEvalErrors(2))
+#minuit = RooMinuit(nll)
+#fitresults = minuit.fit('hvr')
+
+## Monte Carlo
+#MC_study = RooMCStudy(final_gamma_bckgd_pdf,RooArgSet(rec,ion))
+#MC_study.generateAndFit(0,events,kTRUE)
+#nllframe = MC_study.plotNLL()
 
 
 
@@ -183,30 +196,30 @@ print ionframe.chiSquare("model", "data", 9)
 # plotting
 c0 = TCanvas('c0','gamma band',1000,750)
 c0.Divide(2,2)
-c0.cd(1)
-gamma_bckgd_hist.Draw('CONT4')
+test = c0.cd(1)
+#test.SetLogz()
+gamma_bckgd_hist.Draw('COLZ')
 realdata_scatter.Draw('SAMES')
 realdata_scatter.SetMarkerColor(kBlack)
 realdata_scatter.SetMarkerStyle(kPlus)
 realdata_scatter.SetMarkerSize(0.8)
 #ER = ER_centroid.asTF(RooArgList(rec))
-ER = ER_centroid
-ER.SetParameter(0,6.4)
-ER.Draw('SAMES')
-ER.SetLineColor(kWhite)
-ER.SetLineWidth(2)
+ER_centroid.SetParameter(0,6.4)
+ER_centroid.DrawCopy('SAMES')
+ER_centroid.SetLineColor(kWhite)
+ER_centroid.SetLineWidth(2)
 #NR = NR_centroid.asTF(RooArgList(rec))
 NR = NR_centroid
-NR.Draw('SAMES')
+NR.DrawCopy('SAMES')
 NR.SetLineColor(kWhite)
 NR.SetLineWidth(2)
 c0.cd(2)
 ionframe.Draw()
 c0.cd(3)
 recframe.Draw()
-c0.cd(4)
-line = TLine()
-line.SetLineWidth(2)
-line.SetLineColor(kRed)
-nllframe.Draw()
-line.DrawLine(nll.getVal(),gPad.GetUymin(),nll.getVal(),gPad.GetUymax())
+#c0.cd(4)
+#line = TLine()
+#line.SetLineWidth(2)
+#line.SetLineColor(kRed)
+#nllframe.Draw()
+#line.DrawLine(nll.getVal(),gPad.GetUymin(),nll.getVal(),gPad.GetUymax())

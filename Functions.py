@@ -294,3 +294,14 @@ def GetGammaCutEfficiency(self,voltage):
       else:
 	hist.SetBinContent(xbin, ybin, 0.0)
   return True
+
+def TGraphFromDataSet(dataset):
+  entries = dataset.numEntries()
+  tgraph = TGraph()
+  for event in range(entries):
+    time = realdata.get(event).getRealValue('time')
+    rec = realdata.get(event).getRealValue('rec')
+    ion = realdata.get(event).getRealValue('ion')
+    print event,time,rec,ion
+    tgraph.SetPoint(event,rec,ion)
+  return tgraph
