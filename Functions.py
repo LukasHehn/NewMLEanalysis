@@ -92,8 +92,8 @@ RecoilEstimator.SetTitle('E_{Rec} estimator from E_{Heat};E_{Rec} [keV_{nr}];E_{
 
 
 # trigger efficiency from DAQ trigger threshold and resolution on heat channel
-TriggerEfficiency = TF1('trigger_efficiency','0.5*(1+ROOT::Math::erf(((x-[0])/([1]*sqrt(2)))))', 0, 30)
-#TriggerEfficiency.SetNpx(Energy['rec']['bins']*10)
+TriggerEfficiency = TF1('trigger_efficiency','0.5*(1+ROOT::Math::erf(((x-[0])/([1]*sqrt(2)))))', 0, 20)
+TriggerEfficiency.SetNpx(1000)
 TriggerEfficiency.SetParName(0, 'Threshold')
 TriggerEfficiency.SetParName(1, 'Resolution')
 TriggerEfficiency.SetTitle('Trigger Efficiency;E_{Heat} (keV);Efficiency')
@@ -107,6 +107,7 @@ FiducialEfficiency.SetParName(1,'Cut off')
 FiducialEfficiency.SetParName(2,'Maximum')
 FiducialEfficiency.SetTitle('Fiducial Efficiency;E_{ion} (keV_{ee});Efficiency')
 
+
 # centroids of ER and NR band
 def ER_centroid_function(x, par):
       xx =x[0]
@@ -115,10 +116,13 @@ def ER_centroid_function(x, par):
 
 ER_centroid_real = TF1("ER_centroid_real", ER_centroid_function, -10, 30, 1)
 ER_centroid_real.SetParameter(0, 6.4)
+ER_centroid_real.SetNpx(1000)
 
 ER_centroid = TF1('ER_centroid','x*(1+(0.16*x^0.18)*([0]/3))/(1+[0]/3)',0,30)
 ER_centroid.SetParName(0,'voltage')
+ER_centroid.SetNpx(1000)
 NR_centroid = TF1('NR_centroid','0.16*x^1.18',0,30)
+NR_centroid.SetNpx(1000)
 
 
 # 95% C.L. gamma cut from Eric
@@ -295,13 +299,14 @@ def GetGammaCutEfficiency(self,voltage):
 	hist.SetBinContent(xbin, ybin, 0.0)
   return True
 
+
 def TGraphFromDataSet(dataset):
   entries = dataset.numEntries()
   tgraph = TGraph()
   for event in range(entries):
-    time = realdata.get(event).getRealValue('time')
-    rec = realdata.get(event).getRealValue('rec')
-    ion = realdata.get(event).getRealValue('ion')
+    time = dataset.get(event).getRealValue('time')
+    rec = dataset.get(event).getRealValue('rec')
+    ion = dataset.get(event).getRealValue('ion')
     print event,time,rec,ion
     tgraph.SetPoint(event,rec,ion)
   return tgraph

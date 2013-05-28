@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-binsize = 1.0
+binsize = 0.1
 Energy = {
-  'ion' : {'min' : -2, 'max' : 15, 'binsize' : binsize},\
-  'rec' : {'min' : -2, 'max' : 30, 'binsize' : binsize}
+  'ion' : {'min' : 0, 'max' : 14, 'binsize' : binsize},\
+  'rec' : {'min' : 0, 'max' : 25, 'binsize' : binsize}
 }
 Energy['ion']['bins'] = int((Energy['ion']['max']-Energy['ion']['min'])/Energy['ion']['binsize'])
 Energy['rec']['bins'] = int((Energy['rec']['max']-Energy['rec']['min'])/Energy['rec']['binsize'])
