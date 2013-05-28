@@ -125,20 +125,6 @@ NR_centroid = TF1('NR_centroid','0.16*x^1.18',0,30)
 NR_centroid.SetNpx(1000)
 
 
-# 95% C.L. gamma cut from Eric
-GammaCut = TF1('gamma_cut','x*((1+[0]*[1]/[2])/(1+[1]/[2]))+1.96*sqrt([3]^2+[4]^2*((1+[0]*[1]/[2])/(1+[1]/[2]))^2)',0,30)
-GammaCut.SetNpx(1000)
-GammaCut.SetParName(0,'Mean Quenching Factor')
-GammaCut.FixParameter(0, 0.24)
-GammaCut.SetParName(1,'Voltage')
-GammaCut.FixParameter(1, 6.4) #ID3 only
-GammaCut.SetParName(2,'Creation Potential')
-GammaCut.FixParameter(2, 3.0)
-GammaCut.SetParName(3,'Ionization Energy Resolution')
-GammaCut.SetParName(4,'Recoil Energy Resolution')
-GammaCut.SetTitle('Gamma Cut;E_{rec} (keV_{nr});E_{ion} (keV_{ee})')
-
-
 def RecoilResolutionFromHeat(FWHM_heat,voltage,Erec):
   Q = LindhardQuenching.Eval(Erec)
   FWHM_rec = FWHM_heat * ((1+voltage/3.0)/(1+1.18*Q*voltage/3.0))
