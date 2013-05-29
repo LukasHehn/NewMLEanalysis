@@ -293,6 +293,6 @@ def TGraphFromDataSet(dataset):
     time = dataset.get(event).getRealValue('time')
     rec = dataset.get(event).getRealValue('rec')
     ion = dataset.get(event).getRealValue('ion')
-    print event,time,rec,ion
+    #print event,time,rec,ion
     tgraph.SetPoint(event,rec,ion)
   return tgraph
