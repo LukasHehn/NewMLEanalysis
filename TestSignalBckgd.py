@@ -4,6 +4,10 @@ from Functions import *
 from DetectorClass import *
 
 
+# load Eric's WIMP signal file
+gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistri.C")
+
+
 # definition of observables
 ion = RooRealVar('ion','E_{ion}',Energy['ion']['min'],Energy['ion']['max'],'keV_{ee}')
 rec = RooRealVar('rec','E_{rec}',Energy['rec']['min'],Energy['rec']['max'],'keV_{nr}')
@@ -148,6 +152,18 @@ GeGa68_coeff = RooRealVar('GeGa68_coeff','GeGa68_coeff',0.0,1.0)
 # -----------------------------------------------------------------------------------------
 
 
+# wimp signal
+TriggerEfficiency.SetParameter(0, 3.874)
+TriggerEfficiency.SetParameter(1, FWHM_rec)
+
+TriggerEfficiency.SetNpx(1000)
+efficiency = TriggerEfficiency.GetHistogram()
+
+signal_hist = WimpDistri('10', 'ID3', FWHM_rec, FWHM_ion, efficiency, 0, 0, 0, 6.4, 1)
+signal_datahist = RooDataHist('signal_datahist','signal_datahist',RooArgList(rec,ion),signal_hist)
+signal_pdf = RooHistPdf('signal_pdf','signal_pdf',RooArgSet(rec,ion),signal_datahist)
+
+
 # gamma background
 flat_gamma_bckgd_hist = FlatGammaBckgd2DEric(sigma_ion.getVal(),sigma_rec.getVal())
 flat_gamma_bckgd_hist.Multiply(total_efficiency)
@@ -168,6 +184,10 @@ gamma_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList
 # automatic mode
 #FitResults = gamma_bckgd_pdf.fitTo(realdata)
 
+
+# combine signal and background
+signal_ratio = RooRealVar('signal_ratio','signal_ratio',0.0,0.0,1.0)
+final_pdf = RooAddPdf('final_pdf','final_pdf',gamma_bckgd_pdf,signal_pdf,signal_ratio)
 
 # manual mode
 nll = RooNLLVar('nll_background_only','nll background only',final_pdf,realdata,RooFit.PrintEvalErrors(2))
