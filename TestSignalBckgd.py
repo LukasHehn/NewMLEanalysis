@@ -9,6 +9,7 @@ gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistri.C")
 
 
 wimp_mass = 15
+MC_sims = 10
 
 
 # definition of observables
@@ -21,10 +22,7 @@ time = RooRealVar('time','time',0.0,1.2,'years')
 total_efficiency = Simple2DEfficiencyID3()
 
 efficiency_datahist = RooDataHist('efficiency_datahist','efficiency_datahist',RooArgList(rec,ion),total_efficiency)
-efficiency_pdf = RooHistPdf('efficiency_pdf','efficiency_pdf',RooArgSet(rec,ion),efficiency_datahist)
-
-
-# detector specific parameters
+efficiency_pdf = RooHistPdf('efficiency_pdf','efficiency_pdf',RooArgSet(rec,ion),efficiency_dafinal_pdf# detector specific parameters
 voltage = RooRealVar('voltage','applied voltage',6.4)
 
 #FWHM_heat = 0.71 #me@baseline
@@ -195,8 +193,8 @@ ndf = FitResults.floatParsFinal().getSize()
 
 
 # Monte Carlo
-MC_study = RooMCStudy(gamma_bckgd_pdf,RooArgSet(rec,ion))
-MC_study.generateAndFit(10,events,kTRUE)
+MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion))
+MC_study.generateAndFit(MC_sims,events,kTRUE)
 nllframe = MC_study.plotNLL()
 
 
@@ -207,39 +205,38 @@ final_hist = final_pdf.createHistogram('final_gamma_bckgd_hist',rec,RooFit.Binni
 recbins = int((rec.getMax()-rec.getMin())*5)
 ionbins = int((ion.getMax()-ion.getMin())*10)
 
+
 params = RooArgSet(signal_ratio,energy_correction_rec,energy_correction_ion)
+
 
 # RooFit frames
 recframe = rec.frame()
 realdata.plotOn(recframe, RooFit.Name("data"), RooFit.Binning(recbins), RooFit.MarkerColor(kBlack), RooFit.MarkerSize(1.0))
-gamma_bckgd_pdf.plotOn(recframe, RooFit.Name('model'), RooFit.LineColor(kBlue), RooFit.LineWidth(2))
-gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("V49_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("Cr51_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("Mn54_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("Fe55_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("Co57_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("Zn65_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("Ge68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("Ga68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-#realdata.plotOn(recframe, RooFit.Name("data"), RooFit.Binning(recbins), RooFit.MarkerColor(kBlack), RooFit.MarkerSize(1.0))
-gamma_bckgd_pdf.paramOn(recframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.AutoPrecision(1)),RooFit.Layout(0.12,0.7,0.9),RooFit.ShowConstants(kTRUE))
-#realdata.statOn(recframe)
+final_pdf.plotOn(recframe, RooFit.Name('model'), RooFit.LineColor(kBlue), RooFit.LineWidth(2))
+final_pdf.plotOn(recframe, RooFit.Components("V49_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(recframe, RooFit.Components("Cr51_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(recframe, RooFit.Components("Mn54_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(recframe, RooFit.Components("Fe55_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(recframe, RooFit.Components("Co57_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(recframe, RooFit.Components("Zn65_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(recframe, RooFit.Components("Ge68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(recframe, RooFit.Components("Ga68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.paramOn(recframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.AutoPrecision(5)),RooFit.Layout(0.12,0.7,0.9),RooFit.ShowConstants(kTRUE))
 red_chi2_rec = recframe.chiSquare("model", "data", ndf)
 print "reduced chi2 for rec:",red_chi2_rec
 
 ionframe = ion.frame()
 realdata.plotOn(ionframe, RooFit.Name('data'), RooFit.Binning(ionbins), RooFit.MarkerSize(1.0))
-gamma_bckgd_pdf.plotOn(ionframe, RooFit.Name('model'), RooFit.LineColor(kBlue), RooFit.LineWidth(2))
-gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("V49_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("Cr51_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("Mn54_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("Fe55_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("Co57_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("Zn65_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("Ge68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("Ga68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-#realdata.plotOn(ionframe, RooFit.Name('data'), RooFit.Binning(ionbins), RooFit.MarkerSize(1.0))
-gamma_bckgd_pdf.paramOn(ionframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.AutoPrecision(1)),RooFit.Layout(0.12,0.7,0.9),RooFit.ShowConstants(kTRUE))
+final_pdf.plotOn(ionframe, RooFit.Name('model'), RooFit.LineColor(kBlue), RooFit.LineWidth(2))
+final_pdf.plotOn(ionframe, RooFit.Components("V49_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(ionframe, RooFit.Components("Cr51_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(ionframe, RooFit.Components("Mn54_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(ionframe, RooFit.Components("Fe55_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(ionframe, RooFit.Components("Co57_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(ionframe, RooFit.Components("Zn65_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(ionframe, RooFit.Components("Ge68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(ionframe, RooFit.Components("Ga68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.paramOn(ionframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.AutoPrecision(1)),RooFit.Layout(0.12,0.7,0.9),RooFit.ShowConstants(kTRUE))
 red_chi2_ion = ionframe.chiSquare("model", "data", ndf)
 red_chi2_ion_label = TPaveLabel()
 red_chi2_ion_label.SetLabel('test')
