@@ -8,8 +8,8 @@ from DetectorClass import *
 gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistri.C")
 
 
-wimp_mass = 15
-MC_sims = 10
+wimp_mass = 12
+MC_sims = 1000
 
 
 # definition of observables
@@ -22,7 +22,7 @@ time = RooRealVar('time','time',0.0,1.2,'years')
 total_efficiency = Simple2DEfficiencyID3()
 
 efficiency_datahist = RooDataHist('efficiency_datahist','efficiency_datahist',RooArgList(rec,ion),total_efficiency)
-efficiency_pdf = RooHistPdf('efficiency_pdf','efficiency_pdf',RooArgSet(rec,ion),efficiency_dafinal_pdf# detector specific parameters
+efficiency_pdf = RooHistPdf('efficiency_pdf','efficiency_pdf',RooArgSet(rec,ion),efficiency_datahist)# detector specific parameters
 voltage = RooRealVar('voltage','applied voltage',6.4)
 
 #FWHM_heat = 0.71 #me@baseline
@@ -221,7 +221,7 @@ final_pdf.plotOn(recframe, RooFit.Components("Co57_rec_pdf"), RooFit.LineColor(k
 final_pdf.plotOn(recframe, RooFit.Components("Zn65_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Ge68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Ga68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-final_pdf.paramOn(recframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.AutoPrecision(5)),RooFit.Layout(0.12,0.7,0.9),RooFit.ShowConstants(kTRUE))
+final_pdf.paramOn(recframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.AutoPrecision(1)),RooFit.Layout(0.1,0.5,0.9),RooFit.ShowConstants(kTRUE))
 red_chi2_rec = recframe.chiSquare("model", "data", ndf)
 print "reduced chi2 for rec:",red_chi2_rec
 
@@ -236,12 +236,17 @@ final_pdf.plotOn(ionframe, RooFit.Components("Co57_ion_pdf"), RooFit.LineColor(k
 final_pdf.plotOn(ionframe, RooFit.Components("Zn65_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Ge68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Ga68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-final_pdf.paramOn(ionframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.AutoPrecision(1)),RooFit.Layout(0.12,0.7,0.9),RooFit.ShowConstants(kTRUE))
+final_pdf.paramOn(ionframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.AutoPrecision(1)),RooFit.Layout(0.1,0.5,0.9),RooFit.ShowConstants(kTRUE))
 red_chi2_ion = ionframe.chiSquare("model", "data", ndf)
 red_chi2_ion_label = TPaveLabel()
 red_chi2_ion_label.SetLabel('test')
 ionframe.addObject(red_chi2_ion_label)
 print "reduced chi2 for ion:",red_chi2_ion
+
+
+print "signal ratio:",signal_ratio.getVal()
+print "upper error:",signal_ratio.getErrorHi()
+print "90% C.L. upper events:",(signal_ratio.getVal()+1.64*signal_ratio.getErrorHi())*events
 
 
 # plotting
