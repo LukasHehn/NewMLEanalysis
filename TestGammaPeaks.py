@@ -157,7 +157,7 @@ ndf = FitResults.floatParsFinal().getSize()
 
 # Monte Carlo
 MC_study = RooMCStudy(gamma_bckgd_pdf,RooArgSet(rec,ion))
-MC_study.generateAndFit(1000,events,kTRUE)
+MC_study.generateAndFit(1,events,kTRUE)
 nllframe = MC_study.plotNLL()
 
 

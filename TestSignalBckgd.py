@@ -8,6 +8,9 @@ from DetectorClass import *
 gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistri.C")
 
 
+wimp_mass = 15
+
+
 # definition of observables
 ion = RooRealVar('ion','E_{ion}',Energy['ion']['min'],Energy['ion']['max'],'keV_{ee}')
 rec = RooRealVar('rec','E_{rec}',Energy['rec']['min'],Energy['rec']['max'],'keV_{nr}')
@@ -157,7 +160,8 @@ TriggerEfficiency.SetParameter(1, FWHM_rec)
 TriggerEfficiency.SetNpx(1000)
 efficiency = TriggerEfficiency.GetHistogram()
 
-signal_hist = WimpDistri('10', 'ID3', FWHM_rec, FWHM_ion, efficiency, 0, 0, 0, 6.4, 1)
+signal_hist = WimpDistri(str(wimp_mass), 'ID3', FWHM_rec, FWHM_ion, efficiency, 0, 0, 0, 6.4, 1)
+signal_hist.SetTitle('WIMP signal 15GeV')
 signal_datahist = RooDataHist('signal_datahist','signal_datahist',RooArgList(rec,ion),signal_hist)
 signal_pdf = RooHistPdf('signal_pdf','signal_pdf',RooArgSet(rec,ion),signal_datahist)
 
@@ -179,10 +183,10 @@ gamma_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList
 
 # combine signal and background
 signal_ratio = RooRealVar('signal_ratio','signal_ratio',0.0,0.0,1.0)
-final_pdf = RooAddPdf('final_pdf','final_pdf',gamma_bckgd_pdf,signal_pdf,signal_ratio)
+final_pdf = RooAddPdf('final_pdf','final_pdf',signal_pdf,gamma_bckgd_pdf,signal_ratio)
 
 # manual mode
-nll = RooNLLVar('nll_background_only','nll background only',final_pdf,realdata,RooFit.PrintEvalErrors(2))
+nll = RooNLLVar('nll','nll',final_pdf,realdata,RooFit.PrintEvalErrors(2))
 minuit = RooMinuit(nll)
 FitResults = minuit.fit('hvr')
 
@@ -197,13 +201,13 @@ nllframe = MC_study.plotNLL()
 
 
 # histogram
-gamma_bckgd_hist = gamma_bckgd_pdf.createHistogram('final_gamma_bckgd_hist',rec,RooFit.Binning(int((rec.getMax()-rec.getMin())*10)),RooFit.YVar(ion,RooFit.Binning(int((ion.getMax()-ion.getMin())*10))))
+final_hist = final_pdf.createHistogram('final_gamma_bckgd_hist',rec,RooFit.Binning(int((rec.getMax()-rec.getMin())*10)),RooFit.YVar(ion,RooFit.Binning(int((ion.getMax()-ion.getMin())*10))))
 
 
 recbins = int((rec.getMax()-rec.getMin())*5)
 ionbins = int((ion.getMax()-ion.getMin())*10)
 
-parameters = RooArgSet(energy_correction_rec,energy_correction_ion,Ga68_coeff)
+params = RooArgSet(signal_ratio,energy_correction_rec,energy_correction_ion)
 
 # RooFit frames
 recframe = rec.frame()
@@ -218,7 +222,7 @@ gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("Zn65_rec_pdf"), RooFit.LineC
 gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("Ge68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 gamma_bckgd_pdf.plotOn(recframe, RooFit.Components("Ga68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 #realdata.plotOn(recframe, RooFit.Name("data"), RooFit.Binning(recbins), RooFit.MarkerColor(kBlack), RooFit.MarkerSize(1.0))
-gamma_bckgd_pdf.paramOn(recframe,RooFit.Parameters(parameters),RooFit.Format('NEU',RooFit.AutoPrecision(1)),RooFit.Layout(0.12,0.7,0.9),RooFit.ShowConstants(kTRUE))
+gamma_bckgd_pdf.paramOn(recframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.AutoPrecision(1)),RooFit.Layout(0.12,0.7,0.9),RooFit.ShowConstants(kTRUE))
 #realdata.statOn(recframe)
 red_chi2_rec = recframe.chiSquare("model", "data", ndf)
 print "reduced chi2 for rec:",red_chi2_rec
@@ -235,7 +239,7 @@ gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("Zn65_ion_pdf"), RooFit.LineC
 gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("Ge68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 gamma_bckgd_pdf.plotOn(ionframe, RooFit.Components("Ga68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 #realdata.plotOn(ionframe, RooFit.Name('data'), RooFit.Binning(ionbins), RooFit.MarkerSize(1.0))
-gamma_bckgd_pdf.paramOn(ionframe,RooFit.Parameters(parameters),RooFit.Format('NEU',RooFit.AutoPrecision(1)),RooFit.Layout(0.12,0.7,0.9),RooFit.ShowConstants(kTRUE))
+gamma_bckgd_pdf.paramOn(ionframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.AutoPrecision(1)),RooFit.Layout(0.12,0.7,0.9),RooFit.ShowConstants(kTRUE))
 red_chi2_ion = ionframe.chiSquare("model", "data", ndf)
 red_chi2_ion_label = TPaveLabel()
 red_chi2_ion_label.SetLabel('test')
@@ -244,12 +248,13 @@ print "reduced chi2 for ion:",red_chi2_ion
 
 
 # plotting
-c0 = TCanvas('c0','gamma band',1000,750)
-c0.Divide(2,2)
-c0.cd(1)
-gamma_bckgd_hist.Draw('COLZ')
-gamma_bckgd_hist.SetStats(0)
-gamma_bckgd_hist.SetTitle('ID3 WIMP search data + gamma bckgd PDF')
+c1 = TCanvas('c1','gamma band',1000,750)
+c1.Divide(2,1)
+c1_1.Divide(1,2)
+c1_1.cd(1)
+final_hist.Draw('COLZ')
+final_hist.SetStats(0)
+final_hist.SetTitle('ID3 WIMP search data + best fit PDF')
 #realdata_scatter.SetMarkerColor(kBlack)
 #realdata_scatter.SetMarkerStyle(kPlus)
 #realdata_scatter.SetMarkerSize(0.8)
@@ -257,22 +262,30 @@ gamma_bckgd_hist.SetTitle('ID3 WIMP search data + gamma bckgd PDF')
 realdata_graph.SetMarkerColor(kMagenta)
 realdata_graph.SetMarkerStyle(kPlus)
 realdata_graph.Draw('SAMESP')
-c0.cd(1).SetLogz()
+c1_1.cd(1).SetLogz()
 ER_centroid.SetLineColor(kBlack)
 ER_centroid.SetLineWidth(1)
 ER_centroid.DrawCopy('SAME')
 NR_centroid.SetLineColor(kBlack)
 NR_centroid.SetLineWidth(1)
-NR_centroid.Draw('SAME')
-c0.cd(2)
+NR_centroid.DrawCopy('SAME')
+c1_1.cd(2)
+signal_hist.Draw('COLZ')
+signal_hist.SetStats(0)
+final_hist.SetTitle('ID3 WIMP search data + signal PDF only')
+realdata_graph.Draw('SAMESP')
+ER_centroid.DrawCopy('SAME')
+NR_centroid.DrawCopy('SAME')
+c1_2.Divide(1,3)
+c1_2.cd(1)
 ionframe.Draw()
 ionframe.SetTitle('Projection in E_{ion}')
 ionframe.GetXaxis().SetRangeUser(1,13.5)
-c0.cd(3)
+c1_2.cd(2)
 recframe.Draw()
 recframe.SetTitle('Projection in E_{rec}')
 recframe.GetXaxis().SetRangeUser(3,25)
-c0.cd(4)
+c1_2.cd(3)
 line = TLine()
 line.SetLineWidth(2)
 line.SetLineColor(kRed)
