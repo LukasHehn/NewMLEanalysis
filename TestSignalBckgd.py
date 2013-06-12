@@ -43,21 +43,6 @@ realdata_graph = TGraphFromDataSet(realdata)
 events = int(realdata.numEntries())
 
 
-## smearing in recoil
-#mean_rec = RooRealVar('mean_rec','mean_rec mean',0)
-#recoil_smearing = RooGaussian('recoil_smearing','recoil_smearing',rec,mean_rec,sigma_rec)
-#rec.setBins(10000,'fft')
-
-# position of bands
-#ER_centroid = RooFormulaVar('ER_centroid','@0*(1+(0.16*@0^0.18)*(@1/3))/(1+@1/3)',RooArgList(rec,voltage))
-#ER_centroid = RooFormulaVar('ER_centroid','0.5*@0',RooArgList(rec))
-#ER_centroid = RooFit.bindFunction(ER_centroid_real,rec,RooArgList(voltage)) #use only real defined function for Electron Recoil centroid
-#NR_centroid = RooFormulaVar('NR_centroid','0.16*@0^1.18',RooArgList(rec))
-
-# gaussians in ionization energy with shifting mean in recoil energy
-#ion_gauss_ER = RooGaussian('ion_gauss_ER','gauss with shifted mean',ion,ER_centroid,sigma_ion)
-
-
 # -----------------------------------------------------------------------------------------
 # definition of gamma peaks
 energy_correction_ion = RooRealVar('energy_correction_ion','energy_correction_ion',0.5,1.5)
@@ -172,11 +157,6 @@ flat_gamma_bckgd_pdf = RooHistPdf('flat_gamma_bckgd_pdf','flat_gamma_bckgd_pdf',
 
 # normal gamma bckgd model
 gamma_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList(V49_pdf, Cr51_pdf, Mn54_pdf, Fe55_pdf, Co57_pdf, Zn65_pdf, GeGa68_pdf, flat_gamma_bckgd_pdf),RooArgList(V49_coeff, Cr51_coeff, Mn54_coeff, Fe55_coeff, Co57_coeff, Zn65_coeff, GeGa68_coeff),kTRUE)
-
-
-# maximum likelihood fit to data
-# automatic mode
-#FitResults = gamma_bckgd_pdf.fitTo(realdata)
 
 
 # combine signal and background
