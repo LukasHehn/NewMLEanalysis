@@ -8,8 +8,8 @@ from DetectorClass import *
 gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistri.C")
 
 
-wimp_mass = 12
-MC_sims = 1000
+wimp_mass = 30
+MC_sims = 100
 
 
 # definition of observables
@@ -159,7 +159,7 @@ TriggerEfficiency.SetNpx(1000)
 efficiency = TriggerEfficiency.GetHistogram()
 
 signal_hist = WimpDistri(str(wimp_mass), 'ID3', FWHM_rec, FWHM_ion, efficiency, 0, 0, 0, 6.4, 1)
-signal_hist.SetTitle('WIMP signal 15GeV')
+signal_hist.SetTitle('WIMP signal %sGeV'%wimp_mass)
 signal_datahist = RooDataHist('signal_datahist','signal_datahist',RooArgList(rec,ion),signal_hist)
 signal_pdf = RooHistPdf('signal_pdf','signal_pdf',RooArgSet(rec,ion),signal_datahist)
 
@@ -180,7 +180,7 @@ gamma_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList
 
 
 # combine signal and background
-signal_ratio = RooRealVar('signal_ratio','signal_ratio',0.0,0.0,1.0)
+signal_ratio = RooRealVar('signal_ratio','signal_ratio',0.5,-1.0,1.0)
 final_pdf = RooAddPdf('final_pdf','final_pdf',signal_pdf,gamma_bckgd_pdf,signal_ratio)
 
 # manual mode
@@ -225,6 +225,7 @@ final_pdf.paramOn(recframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.
 red_chi2_rec = recframe.chiSquare("model", "data", ndf)
 print "reduced chi2 for rec:",red_chi2_rec
 
+
 ionframe = ion.frame()
 realdata.plotOn(ionframe, RooFit.Name('data'), RooFit.Binning(ionbins), RooFit.MarkerSize(1.0))
 final_pdf.plotOn(ionframe, RooFit.Name('model'), RooFit.LineColor(kBlue), RooFit.LineWidth(2))
@@ -244,6 +245,12 @@ ionframe.addObject(red_chi2_ion_label)
 print "reduced chi2 for ion:",red_chi2_ion
 
 
+ratioframe = signal_ratio.frame()
+nll.plotOn(ratioframe)
+
+paramframe = MC_study.plotParam(signal_ratio)#,RooFit.FrameRange(ratio_range['min'],ratio_range['max']),RooFit.Binning(150))
+
+print "wimp mass:",wimp_mass
 print "signal ratio:",signal_ratio.getVal()
 print "upper error:",signal_ratio.getErrorHi()
 print "90% C.L. upper events:",(signal_ratio.getVal()+1.64*signal_ratio.getErrorHi())*events
@@ -287,11 +294,29 @@ c1_2.cd(2)
 recframe.Draw()
 recframe.SetTitle('Projection in E_{rec}')
 recframe.GetXaxis().SetRangeUser(3,25)
-c1_2.cd(3)
-line = TLine()
-line.SetLineWidth(2)
-line.SetLineColor(kRed)
+c1_2_3.Divide(3,1)
+c1_2_3.cd(1)
+nll_line = TLine()
+nll_line.SetLineWidth(2)
+nll_line.SetLineColor(kRed)
 nllframe.Draw()
 nllframe.SetTitle('MC distribution of NLL-values')
 gPad.Update()
-line.DrawLine(nll.getVal(),gPad.GetUymin(),nll.getVal(),gPad.GetUymax())
+nll_line.DrawLine(nll.getVal(),gPad.GetUymin(),nll.getVal(),gPad.GetUymax())
+c1_2_3.cd(2)
+ratioframe.Draw()
+ratioframe.SetTitle('NLL')
+gPad.Update()
+ratio_line = TLine()
+ratio_line.SetLineWidth(2)
+ratio_line.SetLineColor(kRed)
+ratio_line.DrawLine(signal_ratio.getVal(),gPad.GetUymin(),signal_ratio.getVal(),gPad.GetUymax())
+ratio_line.SetLineStyle(7)
+ratio_line.DrawLine(signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymin(),signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymax())
+c1_2_3.cd(3)
+paramframe.Draw()
+ratio_line.SetLineWidth(2)
+ratio_line.SetLineColor(kRed)
+ratio_line.DrawLine(signal_ratio.getVal(),gPad.GetUymin(),signal_ratio.getVal(),gPad.GetUymax())
+ratio_line.SetLineStyle(7)
+ratio_line.DrawLine(signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymin(),signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymax())
