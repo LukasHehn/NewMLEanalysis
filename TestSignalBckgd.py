@@ -8,8 +8,9 @@ from DetectorClass import *
 gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistri.C")
 
 
-wimp_mass = 30
-MC_sims = 100
+wimp_mass = 30 #set wimp mass
+MC_sims = False #set number of MC simulations: 0 means none at all
+cutset = False #use event set with 3 outlying events cut
 
 
 # definition of observables
@@ -36,8 +37,8 @@ sigma_ion = RooRealVar('sigma_ion','ionization energy resolution',FWHM_ion/2.35)
 
 
 # dataset
-#realdata = RooDataSet.read('ID3-eventlist_30keV_cut3.txt',RooArgList(time,rec,ion)) #without 2 events near NR band
-realdata = RooDataSet.read('ID3-eventlist_30keV.txt',RooArgList(time,rec,ion))
+if cutset: realdata = RooDataSet.read('ID3-eventlist_30keV_cut3.txt',RooArgList(time,rec,ion)) #without 2 events near NR band
+else: realdata = RooDataSet.read('ID3-eventlist_30keV.txt',RooArgList(time,rec,ion))
 realdata_scatter = realdata.createHistogram(rec,ion,Energy['rec']['bins'],Energy['ion']['bins'])
 realdata_graph = TGraphFromDataSet(realdata)
 events = int(realdata.numEntries())
@@ -160,7 +161,7 @@ gamma_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList
 
 
 # combine signal and background
-signal_ratio = RooRealVar('signal_ratio','signal_ratio',0.5,-1.0,1.0)
+signal_ratio = RooRealVar('signal_ratio','signal_ratio',0.0,-0.1,1.0)
 final_pdf = RooAddPdf('final_pdf','final_pdf',signal_pdf,gamma_bckgd_pdf,signal_ratio)
 
 # manual mode
@@ -173,13 +174,18 @@ ndf = FitResults.floatParsFinal().getSize()
 
 
 # Monte Carlo
-MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion))
-MC_study.generateAndFit(MC_sims,events,kTRUE)
-nllframe = MC_study.plotNLL()
+if MC_sims:
+  MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion))
+  MC_study.generateAndFit(MC_sims,events,kTRUE)
+  nllframe = MC_study.plotNLL()
+  paramframe = MC_study.plotParam(signal_ratio)#,RooFit.FrameRange(ratio_range['min'],ratio_range['max']),RooFit.Binning(150))
+else:
+  nllframe = RooPlot(0,10,0,10)
+  paramframe = RooPlot(0,10,0,10)
 
 
 # histogram
-final_hist = final_pdf.createHistogram('final_gamma_bckgd_hist',rec,RooFit.Binning(int((rec.getMax()-rec.getMin())*10)),RooFit.YVar(ion,RooFit.Binning(int((ion.getMax()-ion.getMin())*10))))
+final_hist = final_pdf.createHistogram('final_hist',rec,RooFit.Binning(int((rec.getMax()-rec.getMin())*10)),RooFit.YVar(ion,RooFit.Binning(int((ion.getMax()-ion.getMin())*10))))
 
 
 recbins = int((rec.getMax()-rec.getMin())*5)
@@ -228,7 +234,6 @@ print "reduced chi2 for ion:",red_chi2_ion
 ratioframe = signal_ratio.frame()
 nll.plotOn(ratioframe)
 
-paramframe = MC_study.plotParam(signal_ratio)#,RooFit.FrameRange(ratio_range['min'],ratio_range['max']),RooFit.Binning(150))
 
 print "wimp mass:",wimp_mass
 print "signal ratio:",signal_ratio.getVal()
@@ -276,17 +281,18 @@ recframe.SetTitle('Projection in E_{rec}')
 recframe.GetXaxis().SetRangeUser(3,25)
 c1_2_3.Divide(3,1)
 c1_2_3.cd(1)
+nllframe.Draw()
+nllframe.SetTitle('MC distribution of NLL-values')
 nll_line = TLine()
 nll_line.SetLineWidth(2)
 nll_line.SetLineColor(kRed)
-nllframe.Draw()
-nllframe.SetTitle('MC distribution of NLL-values')
-gPad.Update()
 nll_line.DrawLine(nll.getVal(),gPad.GetUymin(),nll.getVal(),gPad.GetUymax())
+gPad.Update()
 c1_2_3.cd(2)
 ratioframe.Draw()
 ratioframe.SetTitle('NLL')
 gPad.Update()
+nll_line.DrawLine(gPad.GetUxmin(),nll.getVal(),gPad.GetUxmax(),nll.getVal())
 ratio_line = TLine()
 ratio_line.SetLineWidth(2)
 ratio_line.SetLineColor(kRed)
