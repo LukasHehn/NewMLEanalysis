@@ -160,8 +160,13 @@ flat_gamma_bckgd_pdf = RooHistPdf('flat_gamma_bckgd_pdf','flat_gamma_bckgd_pdf',
 gamma_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList(V49_pdf, Cr51_pdf, Mn54_pdf, Fe55_pdf, Co57_pdf, Zn65_pdf, GeGa68_pdf, flat_gamma_bckgd_pdf),RooArgList(V49_coeff, Cr51_coeff, Mn54_coeff, Fe55_coeff, Co57_coeff, Zn65_coeff, GeGa68_coeff),kTRUE)
 
 
+# initial background fit only
+gamma_bckgd_pdf.fitTo(realdata)
+for param in [V49_coeff, Cr51_coeff, Mn54_coeff, Fe55_coeff, Co57_coeff, Zn65_coeff, Ga68_coeff, GeGa68_coeff,energy_correction_ion,energy_correction_rec]:
+  param.setConstant(kTRUE)
+
 # combine signal and background
-signal_ratio = RooRealVar('signal_ratio','signal_ratio',0.0,-0.1,1.0)
+signal_ratio = RooRealVar('signal_ratio','signal_ratio',0.5,-2.0,1.0)
 final_pdf = RooAddPdf('final_pdf','final_pdf',signal_pdf,gamma_bckgd_pdf,signal_ratio)
 
 # manual mode
@@ -235,6 +240,9 @@ ratioframe = signal_ratio.frame()
 nll.plotOn(ratioframe)
 
 
+FitResults.Print('v')
+
+
 print "wimp mass:",wimp_mass
 print "signal ratio:",signal_ratio.getVal()
 print "upper error:",signal_ratio.getErrorHi()
@@ -245,24 +253,22 @@ print "90% C.L. upper events:",(signal_ratio.getVal()+1.64*signal_ratio.getError
 c1 = TCanvas('c1','gamma band',1000,750)
 c1.Divide(2,1)
 c1_1.Divide(1,2)
+# final pdf and data
 c1_1.cd(1)
+c1_1.cd(1).SetLogz()
 final_hist.Draw('COLZ')
 final_hist.SetStats(0)
 final_hist.SetTitle('ID3 WIMP search data + best fit PDF')
-#realdata_scatter.SetMarkerColor(kBlack)
-#realdata_scatter.SetMarkerStyle(kPlus)
-#realdata_scatter.SetMarkerSize(0.8)
-#realdata_scatter.Draw('SAMES')
 realdata_graph.SetMarkerColor(kMagenta)
 realdata_graph.SetMarkerStyle(kPlus)
 realdata_graph.Draw('SAMESP')
-c1_1.cd(1).SetLogz()
 ER_centroid.SetLineColor(kBlack)
 ER_centroid.SetLineWidth(1)
 ER_centroid.DrawCopy('SAME')
 NR_centroid.SetLineColor(kBlack)
 NR_centroid.SetLineWidth(1)
 NR_centroid.DrawCopy('SAME')
+# wimp signal and data only
 c1_1.cd(2)
 signal_hist.Draw('COLZ')
 signal_hist.SetStats(0)
@@ -271,15 +277,18 @@ realdata_graph.Draw('SAMESP')
 ER_centroid.DrawCopy('SAME')
 NR_centroid.DrawCopy('SAME')
 c1_2.Divide(1,3)
+# data and fit in ionization energy
 c1_2.cd(1)
 ionframe.Draw()
 ionframe.SetTitle('Projection in E_{ion}')
 ionframe.GetXaxis().SetRangeUser(1,13.5)
+# data and fit in recoil energy
 c1_2.cd(2)
 recframe.Draw()
 recframe.SetTitle('Projection in E_{rec}')
 recframe.GetXaxis().SetRangeUser(3,25)
 c1_2_3.Divide(3,1)
+# MC NLL value distribution
 c1_2_3.cd(1)
 nllframe.Draw()
 nllframe.SetTitle('MC distribution of NLL-values')
@@ -288,6 +297,7 @@ nll_line.SetLineWidth(2)
 nll_line.SetLineColor(kRed)
 nll_line.DrawLine(nll.getVal(),gPad.GetUymin(),nll.getVal(),gPad.GetUymax())
 gPad.Update()
+# NLL function of fit to real data set
 c1_2_3.cd(2)
 ratioframe.Draw()
 ratioframe.SetTitle('NLL')
@@ -299,6 +309,7 @@ ratio_line.SetLineColor(kRed)
 ratio_line.DrawLine(signal_ratio.getVal(),gPad.GetUymin(),signal_ratio.getVal(),gPad.GetUymax())
 ratio_line.SetLineStyle(7)
 ratio_line.DrawLine(signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymin(),signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymax())
+# MC ratio distribution
 c1_2_3.cd(3)
 paramframe.Draw()
 ratio_line.SetLineWidth(2)
