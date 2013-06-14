@@ -8,7 +8,8 @@ from DetectorClass import *
 gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistri.C")
 
 
-wimp_mass = 30 #set wimp mass
+#switches and input parameters to control script
+wimp_mass = False #set wimp mass or switch signal of entirely
 MC_sims = False #set number of MC simulations: 0 means none at all
 cutset = False #use event set with 3 outlying events cut
 
@@ -117,7 +118,7 @@ Ga68_rec_energy = RooRealVar('Ga68_rec_energy','Ga68_rec_energy',ER_centroid.Get
 Ga68_rec_pos = RooFormulaVar('Ga68_rec_pos','@0*@1',RooArgList(Ga68_rec_energy,energy_correction_rec))
 Ga68_rec = RooGaussian('Ga68_rec_pdf','Ga68_rec_pdf with shifted mean',rec,Ga68_rec_pos,sigma_rec)
 Ga68_pdf = RooProdPdf('Ga68_pdf','Ga68 peak pdf',Ga68_ion,Ga68_rec)
-Ga68_coeff = RooRealVar('Ga68_coeff','fraction of 68Ga peak (9.66keV)',0.1,0.0,1.0)
+Ga68_coeff = RooRealVar('Ga68_coeff','fraction of 68Ga peak (9.66keV)',0.5,0.0,1.0)
 
 
 Ge68_ion_energy = RooRealVar('Ge68_ion_energy','Ge68_ion_energy',10.37)
@@ -127,30 +128,32 @@ Ge68_rec_energy = RooRealVar('Ge68_rec_energy','Ge68_rec_energy',ER_centroid.Get
 Ge68_rec_pos = RooFormulaVar('Ge68_rec_pos','@0*@1',RooArgList(Ge68_rec_energy,energy_correction_rec))
 Ge68_rec = RooGaussian('Ge68_rec_pdf','Ge68 peak pdf in rec',rec,Ge68_rec_pos,sigma_rec)
 Ge68_pdf = RooProdPdf('Ge68_pdf','Ge68 peak pdf',Ge68_ion,Ge68_rec)
-Ge68_coeff = RooRealVar('Ge68_coeff','fraction of 68Ge peak (10.37keV)',0.1,0.0,1.0)
+Ge68_coeff = RooRealVar('Ge68_coeff','fraction of 68Ge peak (10.37keV)',0.5,0.0,1.0)
 # -----------------------------------------------------------------------------------------
 
 
 # wimp signal
-TriggerEfficiency.SetParameter(0, 3.874)
-TriggerEfficiency.SetParameter(1, FWHM_rec)
+if wimp_mass:
+  TriggerEfficiency.SetParameter(0, 3.874)
+  TriggerEfficiency.SetParameter(1, FWHM_rec)
 
-TriggerEfficiency.SetNpx(1000)
-efficiency = TriggerEfficiency.GetHistogram()
+  TriggerEfficiency.SetNpx(1000)
+  efficiency = TriggerEfficiency.GetHistogram()
 
-signal_hist = WimpDistri(str(wimp_mass), 'ID3', FWHM_rec, FWHM_ion, efficiency, 0, 0, 0, 6.4, 1)
-signal_hist.SetTitle('WIMP signal %sGeV'%wimp_mass)
-signal_datahist = RooDataHist('signal_datahist','signal_datahist',RooArgList(rec,ion),signal_hist)
-signal_pdf = RooHistPdf('signal_pdf','signal_pdf',RooArgSet(rec,ion),signal_datahist)
+  signal_hist = WimpDistri(str(wimp_mass), 'ID3', FWHM_rec, FWHM_ion, efficiency, 0, 0, 0, 6.4, 1)
+  signal_hist.SetTitle('WIMP signal %sGeV'%wimp_mass)
+  signal_datahist = RooDataHist('signal_datahist','signal_datahist',RooArgList(rec,ion),signal_hist)
+  signal_pdf = RooHistPdf('signal_pdf','signal_pdf',RooArgSet(rec,ion),signal_datahist)
 
 
-# gamma background
+# flat gamma background component
 flat_gamma_bckgd_hist = FlatGammaBckgd2DEric(sigma_ion.getVal(),sigma_rec.getVal())
 flat_gamma_bckgd_hist.Multiply(total_efficiency)
 flat_gamma_bckgd_datahist = RooDataHist('flat_gamma_bckgd_datahist','flat_gamma_bckgd_datahist',RooArgList(rec,ion),flat_gamma_bckgd_hist)
 flat_gamma_bckgd_pdf = RooHistPdf('flat_gamma_bckgd_pdf','flat_gamma_bckgd_pdf',RooArgSet(rec,ion),flat_gamma_bckgd_datahist)
 
-# normal gamma bckgd model
+
+# normal gamma bckgd model with peaks
 gamma_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList(V49_pdf, Cr51_pdf, Mn54_pdf, Fe55_pdf, Co57_pdf, Zn65_pdf, Ga68_pdf, Ge68_pdf, flat_gamma_bckgd_pdf),RooArgList(V49_coeff, Cr51_coeff, Mn54_coeff, Fe55_coeff, Co57_coeff, Zn65_coeff, Ga68_coeff, Ge68_coeff),kTRUE)
 
 
@@ -160,9 +163,14 @@ gamma_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList
   #param.setConstant(kTRUE)
 
 
-# combine signal and background
-signal_ratio = RooRealVar('signal_ratio','signal_ratio',0.5,-0.1,1.0)
-final_pdf = RooAddPdf('final_pdf','final_pdf',signal_pdf,gamma_bckgd_pdf,signal_ratio)
+if wimp_mass:
+  # combine signal and background
+  signal_ratio = RooRealVar('signal_ratio','signal_ratio',0.5,-0.1,1.0)
+  final_pdf = RooAddPdf('final_pdf','final_pdf',signal_pdf,gamma_bckgd_pdf,signal_ratio)
+  params = RooArgSet(signal_ratio,energy_correction_rec,energy_correction_ion)
+else:
+  final_pdf = gamma_bckgd_pdf
+  params = RooArgSet(energy_correction_rec,energy_correction_ion)
 
 # manual mode
 nll = RooNLLVar('nll','nll',final_pdf,realdata,RooFit.PrintEvalErrors(2))
@@ -173,17 +181,6 @@ FitResults = minuit.fit('hvr')
 ndf = FitResults.floatParsFinal().getSize()
 
 
-# Monte Carlo
-if MC_sims:
-  MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion))
-  MC_study.generateAndFit(MC_sims,events,kTRUE)
-  nllframe = MC_study.plotNLL()
-  paramframe = MC_study.plotParam(signal_ratio)#,RooFit.FrameRange(ratio_range['min'],ratio_range['max']),RooFit.Binning(150))
-else:
-  nllframe = RooPlot(0,10,0,10)
-  paramframe = RooPlot(0,10,0,10)
-
-
 # histogram
 final_hist = final_pdf.createHistogram('final_hist',rec,RooFit.Binning(int((rec.getMax()-rec.getMin())*10)),RooFit.YVar(ion,RooFit.Binning(int((ion.getMax()-ion.getMin())*10))))
 
@@ -191,8 +188,6 @@ final_hist = final_pdf.createHistogram('final_hist',rec,RooFit.Binning(int((rec.
 recbins = int((rec.getMax()-rec.getMin())*5)
 ionbins = int((ion.getMax()-ion.getMin())*10)
 
-
-params = RooArgSet(signal_ratio,energy_correction_rec,energy_correction_ion)
 
 
 # RooFit frames
@@ -231,26 +226,21 @@ ionframe.addObject(red_chi2_ion_label)
 print "reduced chi2 for ion:",red_chi2_ion
 
 
-ratioframe = signal_ratio.frame()
-nll.plotOn(ratioframe)
-
-
 FitResults.Print('v')
 
 
-print "wimp mass:",wimp_mass
-print "signal ratio:",signal_ratio.getVal()
-print "upper error:",signal_ratio.getErrorHi()
-print "90% C.L. upper events:",(signal_ratio.getVal()+1.64*signal_ratio.getErrorHi())*events
+#print "wimp mass:",wimp_mass
+#print "signal ratio:",signal_ratio.getVal()
+#print "upper error:",signal_ratio.getErrorHi()
+#print "90% C.L. upper events:",(signal_ratio.getVal()+1.64*signal_ratio.getErrorHi())*events
 
 
 # plotting
-c1 = TCanvas('c1','gamma band',1000,750)
-c1.Divide(2,1)
-c1_1.Divide(1,2)
+c1 = TCanvas('c1','fit results',1000,750)
+c1.Divide(2,2)
 # final pdf and data
-c1_1.cd(1)
-c1_1.cd(1).SetLogz()
+c1.cd(1)
+c1.cd(1).SetLogz()
 final_hist.Draw('COLZ')
 final_hist.SetStats(0)
 final_hist.SetTitle('ID3 WIMP search data + best fit PDF')
@@ -264,51 +254,64 @@ NR_centroid.SetLineColor(kBlack)
 NR_centroid.SetLineWidth(1)
 NR_centroid.DrawCopy('SAME')
 # wimp signal and data only
-c1_1.cd(2)
-signal_hist.Draw('COLZ')
-signal_hist.SetStats(0)
-final_hist.SetTitle('ID3 WIMP search data + signal PDF only')
-realdata_graph.Draw('SAMESP')
-ER_centroid.DrawCopy('SAME')
-NR_centroid.DrawCopy('SAME')
-c1_2.Divide(1,3)
+if wimp_mass:
+  ratioframe = signal_ratio.frame()
+  nll.plotOn(ratioframe)
+  c1.cd(2)
+  signal_hist.Draw('COLZ')
+  signal_hist.SetStats(0)
+  final_hist.SetTitle('ID3 WIMP search data + signal PDF only')
+  realdata_graph.Draw('SAMESP')
+  ER_centroid.DrawCopy('SAME')
+  NR_centroid.DrawCopy('SAME')
 # data and fit in ionization energy
-c1_2.cd(1)
+c1.cd(3)
 ionframe.Draw()
 ionframe.SetTitle('Projection in E_{ion}')
 ionframe.GetXaxis().SetRangeUser(1,13.5)
 # data and fit in recoil energy
-c1_2.cd(2)
+c1.cd(4)
 recframe.Draw()
 recframe.SetTitle('Projection in E_{rec}')
 recframe.GetXaxis().SetRangeUser(3,25)
-c1_2_3.Divide(3,1)
-# MC NLL value distribution
-c1_2_3.cd(1)
-nllframe.Draw()
-nllframe.SetTitle('MC distribution of NLL-values')
-nll_line = TLine()
-nll_line.SetLineWidth(2)
-nll_line.SetLineColor(kRed)
-nll_line.DrawLine(nll.getVal(),gPad.GetUymin(),nll.getVal(),gPad.GetUymax())
-gPad.Update()
-# NLL function of fit to real data set
-c1_2_3.cd(2)
-ratioframe.Draw()
-ratioframe.SetTitle('NLL')
-gPad.Update()
-nll_line.DrawLine(gPad.GetUxmin(),nll.getVal(),gPad.GetUxmax(),nll.getVal())
-ratio_line = TLine()
-ratio_line.SetLineWidth(2)
-ratio_line.SetLineColor(kRed)
-ratio_line.DrawLine(signal_ratio.getVal(),gPad.GetUymin(),signal_ratio.getVal(),gPad.GetUymax())
-ratio_line.SetLineStyle(7)
-ratio_line.DrawLine(signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymin(),signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymax())
-# MC ratio distribution
-c1_2_3.cd(3)
-paramframe.Draw()
-ratio_line.SetLineWidth(2)
-ratio_line.SetLineColor(kRed)
-ratio_line.DrawLine(signal_ratio.getVal(),gPad.GetUymin(),signal_ratio.getVal(),gPad.GetUymax())
-ratio_line.SetLineStyle(7)
-ratio_line.DrawLine(signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymin(),signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymax())
+
+
+# Monte Carlo statistics output
+# Monte Carlo
+if MC_sims:
+  MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion))
+  MC_study.generateAndFit(MC_sims,events,kTRUE)
+  nllframe = MC_study.plotNLL()
+  paramframe = MC_study.plotParam(signal_ratio)#,RooFit.FrameRange(ratio_range['min'],ratio_range['max']),RooFit.Binning(150))
+
+  c2 = TCanvas('c2','Monte Carlo statitics',1000,750)
+  c2.Divide(2,2)
+  # MC NLL value distribution
+  c2.cd(1)
+  nllframe.Draw()
+  nllframe.SetTitle('MC distribution of NLL-values')
+  nll_line = TLine()
+  nll_line.SetLineWidth(2)
+  nll_line.SetLineColor(kRed)
+  nll_line.DrawLine(nll.getVal(),gPad.GetUymin(),nll.getVal(),gPad.GetUymax())
+  gPad.Update()
+  # NLL function of fit to real data set
+  c2.cd(2)
+  ratioframe.Draw()
+  ratioframe.SetTitle('NLL')
+  gPad.Update()
+  nll_line.DrawLine(gPad.GetUxmin(),nll.getVal(),gPad.GetUxmax(),nll.getVal())
+  ratio_line = TLine()
+  ratio_line.SetLineWidth(2)
+  ratio_line.SetLineColor(kRed)
+  ratio_line.DrawLine(signal_ratio.getVal(),gPad.GetUymin(),signal_ratio.getVal(),gPad.GetUymax())
+  ratio_line.SetLineStyle(7)
+  ratio_line.DrawLine(signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymin(),signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymax())
+  # MC ratio distribution
+  c2.cd(3)
+  paramframe.Draw()
+  ratio_line.SetLineWidth(2)
+  ratio_line.SetLineColor(kRed)
+  ratio_line.DrawLine(signal_ratio.getVal(),gPad.GetUymin(),signal_ratio.getVal(),gPad.GetUymax())
+  ratio_line.SetLineStyle(7)
+  ratio_line.DrawLine(signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymin(),signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymax())
