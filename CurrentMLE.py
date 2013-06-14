@@ -46,28 +46,28 @@ events = int(realdata.numEntries())
 
 # -----------------------------------------------------------------------------------------
 # definition of gamma peaks
-energy_correction_ion = RooRealVar('energy_correction_ion','energy_correction_ion',0.5,1.5)
-energy_correction_rec = RooRealVar('energy_correction_rec','energy_correction_rec',0.5,1.5)
+energy_correction_ion = RooRealVar('energy_correction_ion','scaling factor ionization energy',0.5,1.5)
+energy_correction_rec = RooRealVar('energy_correction_rec','scaling factor recoil energy',0.5,1.5)
 ER_centroid.SetParameter(0,6.4) #ER_centroid used for calculation of peak position in Erec
 
-V49_ion_energy = RooRealVar('V49_ion_energy','V49_ion_energy',4.97)
+V49_ion_energy = RooRealVar('V49_ion_energy','V49 peak ion energy',4.97)
 V49_ion_pos = RooFormulaVar('V49_ion_pos','@0*@1',RooArgList(V49_ion_energy,energy_correction_ion))
-V49_ion = RooGaussian('V49_ion_pdf','V49_ion_pdf with shifted mean',ion,V49_ion_pos,sigma_ion)
-V49_rec_energy = RooRealVar('V49_rec_energy','V49_rec_energy',ER_centroid.GetX(V49_ion_energy.getVal()))
+V49_ion_pdf = RooGaussian('V49_ion_pdf','V49 peak gauss pdf in ion',ion,V49_ion_pos,sigma_ion)
+V49_rec_energy = RooRealVar('V49_rec_energy','recoil energy V49 peak',ER_centroid.GetX(V49_ion_energy.getVal()))
 V49_rec_pos = RooFormulaVar('V49_rec_pos','@0*@1',RooArgList(V49_rec_energy,energy_correction_rec))
-V49_rec = RooGaussian('V49_rec_pdf','V49_rec_pdf with shifted mean',rec,V49_rec_pos,sigma_rec)
-V49_pdf = RooProdPdf('V49_pdf','5keV peak',V49_ion,V49_rec)
-V49_coeff = RooRealVar('V49_coeff','scaling factor of 5keV peak',0.5,0.0,1.0)
+V49_rec_pdf = RooGaussian('V49_rec_pdf','V49 peak pdf in recoil energy',rec,V49_rec_pos,sigma_rec)
+V49_pdf = RooProdPdf('V49_pdf','V49 peak pdf',V49_ion_pdf,V49_rec_pdf)
+V49_coeff = RooRealVar('V49_coeff','fraction of V49 peak (4.97keV)',0.5,0.0,1.0)
 
 
-Cr51_ion_energy = RooRealVar('Cr51_ion_energy','Cr51_ion_energy',5.46)
+Cr51_ion_energy = RooRealVar('Cr51_ion_energy','Cr51 peak ion energy',5.46)
 Cr51_ion_pos = RooFormulaVar('Cr51_ion_pos','@0*@1',RooArgList(Cr51_ion_energy,energy_correction_ion))
-Cr51_ion = RooGaussian('Cr51_ion_pdf','Cr51_ion_pdf with shifted mean',ion,Cr51_ion_pos,sigma_ion)
+Cr51_ion = RooGaussian('Cr51_ion_pdf','Cr51 peak gauss pdf with shifted mean',ion,Cr51_ion_pos,sigma_ion)
 Cr51_rec_energy = RooRealVar('Cr51_rec_energy','v_rec_energy',ER_centroid.GetX(Cr51_ion_energy.getVal()))
 Cr51_rec_pos = RooFormulaVar('Cr51_rec_pos','@0*@1',RooArgList(Cr51_rec_energy,energy_correction_rec))
 Cr51_rec = RooGaussian('Cr51_rec_pdf','Cr51_rec_pdf with shifted mean',rec,Cr51_rec_pos,sigma_rec)
-Cr51_pdf = RooProdPdf('Cr51_pdf','5keV peak',Cr51_ion,Cr51_rec)
-Cr51_coeff = RooRealVar('Cr51_coeff','scaling factor of 5keV peak',0.5,0.0,1.0)
+Cr51_pdf = RooProdPdf('Cr51_pdf','Cr51 peak pdf',Cr51_ion,Cr51_rec)
+Cr51_coeff = RooRealVar('Cr51_coeff','fraction of 51Cr peak (5.46keV)',0.5,0.0,1.0)
 
 
 Mn54_ion_energy = RooRealVar('Mn54_ion_energy','Mn54_ion_energy',5.99)
@@ -76,8 +76,8 @@ Mn54_ion = RooGaussian('Mn54_ion_pdf','Mn54_ion_pdf with shifted mean',ion,Mn54_
 Mn54_rec_energy = RooRealVar('Mn54_rec_energy','Mn54_rec_energy',ER_centroid.GetX(Mn54_ion_energy.getVal()))
 Mn54_rec_pos = RooFormulaVar('Mn54_rec_pos','@0*@1',RooArgList(Mn54_rec_energy,energy_correction_rec))
 Mn54_rec = RooGaussian('Mn54_rec_pdf','Mn54_rec_pdf with shifted mean',rec,Mn54_rec_pos,sigma_rec)
-Mn54_pdf = RooProdPdf('Mn54_pdf','5keV peak',Mn54_ion,Mn54_rec)
-Mn54_coeff = RooRealVar('Mn54_coeff','scaling factor of 5keV peak',0.5,0.0,1.0)
+Mn54_pdf = RooProdPdf('Mn54_pdf','Mn54 peak pdf',Mn54_ion,Mn54_rec)
+Mn54_coeff = RooRealVar('Mn54_coeff','fraction of 54Mn peak (5.99keV)',0.5,0.0,1.0)
 
 
 Fe55_ion_energy = RooRealVar('Fe55_ion_energy','Fe55_ion_energy',6.54)
@@ -86,8 +86,8 @@ Fe55_ion = RooGaussian('Fe55_ion_pdf','Fe55_ion_pdf with shifted mean',ion,Fe55_
 Fe55_rec_energy = RooRealVar('Fe55_rec_energy','Fe55_rec_energy',ER_centroid.GetX(Fe55_ion_energy.getVal()))
 Fe55_rec_pos = RooFormulaVar('Fe55_rec_pos','@0*@1',RooArgList(Fe55_rec_energy,energy_correction_rec))
 Fe55_rec = RooGaussian('Fe55_rec_pdf','Fe55_rec_pdf with shifted mean',rec,Fe55_rec_pos,sigma_rec)
-Fe55_pdf = RooProdPdf('Fe55_pdf','6keV peak',Fe55_ion,Fe55_rec)
-Fe55_coeff = RooRealVar('Fe55_coeff','scaling factor of 6keV peak',0.5,0.0,1.0)
+Fe55_pdf = RooProdPdf('Fe55_pdf','Fe55 peak pdf',Fe55_ion,Fe55_rec)
+Fe55_coeff = RooRealVar('Fe55_coeff','fraction of 55Fe peak (6.54keV)',0.5,0.0,1.0)
 
 
 Co57_ion_energy = RooRealVar('Co57_ion_energy','Co57_ion_energy',7.11)
@@ -96,8 +96,8 @@ Co57_ion = RooGaussian('Co57_ion_pdf','Co57_ion_pdf with shifted mean',ion,Co57_
 Co57_rec_energy = RooRealVar('Co57_rec_energy','Co57_rec_energy',ER_centroid.GetX(Co57_ion_energy.getVal()))
 Co57_rec_pos = RooFormulaVar('Co57_rec_pos','@0*@1',RooArgList(Co57_rec_energy,energy_correction_rec))
 Co57_rec = RooGaussian('Co57_rec_pdf','Co57_rec_pdf with shifted mean',rec,Co57_rec_pos,sigma_rec)
-Co57_pdf = RooProdPdf('Co57_pdf','7keV peak',Co57_ion,Co57_rec)
-Co57_coeff = RooRealVar('Co57_coeff','scaling factor of 7keV peak',0.5,0.0,1.0)
+Co57_pdf = RooProdPdf('Co57_pdf','Co57 peak pdf',Co57_ion,Co57_rec)
+Co57_coeff = RooRealVar('Co57_coeff','fraction of 57Co peak (7.11keV)',0.5,0.0,1.0)
 
 
 Zn65_ion_energy = RooRealVar('Zn65_ion_energy','Zn65_ion_energy',8.98)
@@ -106,17 +106,8 @@ Zn65_ion = RooGaussian('Zn65_ion_pdf','Zn65_ion_pdf with shifted mean',ion,Zn65_
 Zn65_rec_energy = RooRealVar('Zn65_rec_energy','Zn65_rec_energy',ER_centroid.GetX(Zn65_ion_energy.getVal()))
 Zn65_rec_pos = RooFormulaVar('Zn65_rec_pos','@0*@1',RooArgList(Zn65_rec_energy,energy_correction_rec))
 Zn65_rec = RooGaussian('Zn65_rec_pdf','Zn65_rec_pdf with shifted mean',rec,Zn65_rec_pos,sigma_rec)
-Zn65_pdf = RooProdPdf('Zn65_pdf','9keV peak',Zn65_ion,Zn65_rec)
-Zn65_coeff = RooRealVar('Zn65_coeff','scaling factor of 9keV peak',0.5,0.0,1.0)
-
-
-Ge68_ion_energy = RooRealVar('Ge68_ion_energy','Ge68_ion_energy',10.37)
-Ge68_ion_pos = RooFormulaVar('Ge68_ion_pos','@0*@1',RooArgList(Ge68_ion_energy,energy_correction_ion))
-Ge68_ion = RooGaussian('Ge68_ion_pdf','Ge68_ion_pdf with shifted mean',ion,Ge68_ion_pos,sigma_ion)
-Ge68_rec_energy = RooRealVar('Ge68_rec_energy','Ge68_rec_energy',ER_centroid.GetX(Ge68_ion_energy.getVal()))
-Ge68_rec_pos = RooFormulaVar('Ge68_rec_pos','@0*@1',RooArgList(Ge68_rec_energy,energy_correction_rec))
-Ge68_rec = RooGaussian('Ge68_rec_pdf','Ge68_rec_pdf with shifted mean',rec,Ge68_rec_pos,sigma_rec)
-Ge68_pdf = RooProdPdf('Ge68_pdf','10keV peak',Ge68_ion,Ge68_rec)
+Zn65_pdf = RooProdPdf('Zn65_pdf','Zn65 peak pdf',Zn65_ion,Zn65_rec)
+Zn65_coeff = RooRealVar('Zn65_coeff','fraction of 65Zn peak (8.98keV)',0.5,0.0,1.0)
 
 
 Ga68_ion_energy = RooRealVar('Ga68_ion_energy','Ga68_ion_energy',9.66)
@@ -125,15 +116,18 @@ Ga68_ion = RooGaussian('Ga68_ion_pdf','Ga68_ion_pdf with shifted mean',ion,Ga68_
 Ga68_rec_energy = RooRealVar('Ga68_rec_energy','Ga68_rec_energy',ER_centroid.GetX(Ga68_ion_energy.getVal()))
 Ga68_rec_pos = RooFormulaVar('Ga68_rec_pos','@0*@1',RooArgList(Ga68_rec_energy,energy_correction_rec))
 Ga68_rec = RooGaussian('Ga68_rec_pdf','Ga68_rec_pdf with shifted mean',rec,Ga68_rec_pos,sigma_rec)
-Ga68_pdf = RooProdPdf('Ga68_pdf','96keV peak',Ga68_ion,Ga68_rec)
-Ga68_coeff = RooRealVar('Ga68_coeff','scaling factor of 96keV peak',0.1,0.0,1.0)#0.1,0.0,1.0)
-#Ga68_coeff.setConstant(kTRUE)
+Ga68_pdf = RooProdPdf('Ga68_pdf','Ga68 peak pdf',Ga68_ion,Ga68_rec)
+Ga68_coeff = RooRealVar('Ga68_coeff','fraction of 68Ga peak (9.66keV)',0.1,0.0,1.0)
 
 
-GeGa68_pdf = RooAddPdf('GeGa68_pdf', '68Ge and fixed 68Ga peak',Ga68_pdf,Ge68_pdf,Ga68_coeff)
-GeGa68_coeff = RooRealVar('GeGa68_coeff','GeGa68_coeff',0.0,1.0)
-
-#n_flat = RooRealVar('n_flat','events flat spectrum',0.,0.,1000.0)
+Ge68_ion_energy = RooRealVar('Ge68_ion_energy','Ge68_ion_energy',10.37)
+Ge68_ion_pos = RooFormulaVar('Ge68_ion_pos','@0*@1',RooArgList(Ge68_ion_energy,energy_correction_ion))
+Ge68_ion = RooGaussian('Ge68_ion_pdf','Ge68_ion_pdf with shifted mean',ion,Ge68_ion_pos,sigma_ion)
+Ge68_rec_energy = RooRealVar('Ge68_rec_energy','Ge68_rec_energy',ER_centroid.GetX(Ge68_ion_energy.getVal()))
+Ge68_rec_pos = RooFormulaVar('Ge68_rec_pos','@0*@1',RooArgList(Ge68_rec_energy,energy_correction_rec))
+Ge68_rec = RooGaussian('Ge68_rec_pdf','Ge68 peak pdf in rec',rec,Ge68_rec_pos,sigma_rec)
+Ge68_pdf = RooProdPdf('Ge68_pdf','Ge68 peak pdf',Ge68_ion,Ge68_rec)
+Ge68_coeff = RooRealVar('Ge68_coeff','fraction of 68Ge peak (10.37keV)',0.1,0.0,1.0)
 # -----------------------------------------------------------------------------------------
 
 
@@ -157,16 +151,17 @@ flat_gamma_bckgd_datahist = RooDataHist('flat_gamma_bckgd_datahist','flat_gamma_
 flat_gamma_bckgd_pdf = RooHistPdf('flat_gamma_bckgd_pdf','flat_gamma_bckgd_pdf',RooArgSet(rec,ion),flat_gamma_bckgd_datahist)
 
 # normal gamma bckgd model
-gamma_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList(V49_pdf, Cr51_pdf, Mn54_pdf, Fe55_pdf, Co57_pdf, Zn65_pdf, GeGa68_pdf, flat_gamma_bckgd_pdf),RooArgList(V49_coeff, Cr51_coeff, Mn54_coeff, Fe55_coeff, Co57_coeff, Zn65_coeff, GeGa68_coeff),kTRUE)
+gamma_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList(V49_pdf, Cr51_pdf, Mn54_pdf, Fe55_pdf, Co57_pdf, Zn65_pdf, Ga68_pdf, Ge68_pdf, flat_gamma_bckgd_pdf),RooArgList(V49_coeff, Cr51_coeff, Mn54_coeff, Fe55_coeff, Co57_coeff, Zn65_coeff, Ga68_coeff, Ge68_coeff),kTRUE)
 
 
-# initial background fit only
-gamma_bckgd_pdf.fitTo(realdata)
-for param in [V49_coeff, Cr51_coeff, Mn54_coeff, Fe55_coeff, Co57_coeff, Zn65_coeff, Ga68_coeff, GeGa68_coeff,energy_correction_ion,energy_correction_rec]:
-  param.setConstant(kTRUE)
+## initial background fit only
+#gamma_bckgd_pdf.fitTo(realdata)
+#for param in [V49_coeff, Cr51_coeff, Mn54_coeff, Fe55_coeff, Co57_coeff, Zn65_coeff, Ga68_coeff, Ge68_coeff, energy_correction_ion,energy_correction_rec]:
+  #param.setConstant(kTRUE)
+
 
 # combine signal and background
-signal_ratio = RooRealVar('signal_ratio','signal_ratio',0.5,-2.0,1.0)
+signal_ratio = RooRealVar('signal_ratio','signal_ratio',0.5,-0.1,1.0)
 final_pdf = RooAddPdf('final_pdf','final_pdf',signal_pdf,gamma_bckgd_pdf,signal_ratio)
 
 # manual mode
