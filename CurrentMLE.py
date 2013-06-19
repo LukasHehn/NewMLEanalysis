@@ -9,8 +9,8 @@ gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistri.C")
 
 
 #switches and input parameters to control script
-wimp_mass = False #set wimp mass or switch signal of entirely
-MC_sims = False #set number of MC simulations: 0 means none at all
+wimp_mass = 15 #set wimp mass or switch signal of entirely (with False)
+MC_sims = 1000 #set number of MC simulations: 0 means none at all
 cutset = False #use event set with 3 outlying events cut
 
 
@@ -236,7 +236,7 @@ FitResults.Print('v')
 
 
 # plotting
-c1 = TCanvas('c1','fit results',1000,750)
+c1 = TCanvas('c1','Fit Results',1000,750)
 c1.Divide(2,2)
 # final pdf and data
 c1.cd(1)
@@ -257,15 +257,14 @@ NR_centroid.DrawCopy('SAME')
 if wimp_mass:
   ratioframe = signal_ratio.frame()
   nll.plotOn(ratioframe)
-  c1.cd(2)
-  signal_hist.Draw('COLZ')
+  c1.cd(3)
+  signal_hist.Draw('CONT0')
   signal_hist.SetStats(0)
-  final_hist.SetTitle('ID3 WIMP search data + signal PDF only')
   realdata_graph.Draw('SAMESP')
   ER_centroid.DrawCopy('SAME')
   NR_centroid.DrawCopy('SAME')
 # data and fit in ionization energy
-c1.cd(3)
+c1.cd(2)
 ionframe.Draw()
 ionframe.SetTitle('Projection in E_{ion}')
 ionframe.GetXaxis().SetRangeUser(1,13.5)
@@ -282,36 +281,44 @@ if MC_sims:
   MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion))
   MC_study.generateAndFit(MC_sims,events,kTRUE)
   nllframe = MC_study.plotNLL()
-  paramframe = MC_study.plotParam(signal_ratio)#,RooFit.FrameRange(ratio_range['min'],ratio_range['max']),RooFit.Binning(150))
+  ratioframe_MC = MC_study.plotParam(signal_ratio)#,RooFit.FrameRange(ratio_range['min'],ratio_range['max']),RooFit.Binning(150))
 
-  c2 = TCanvas('c2','Monte Carlo statitics',1000,750)
-  c2.Divide(2,2)
-  # MC NLL value distribution
-  c2.cd(1)
-  nllframe.Draw()
-  nllframe.SetTitle('MC distribution of NLL-values')
   nll_line = TLine()
   nll_line.SetLineWidth(2)
-  nll_line.SetLineColor(kRed)
-  nll_line.DrawLine(nll.getVal(),gPad.GetUymin(),nll.getVal(),gPad.GetUymax())
-  gPad.Update()
-  # NLL function of fit to real data set
-  c2.cd(2)
-  ratioframe.Draw()
-  ratioframe.SetTitle('NLL')
-  gPad.Update()
-  nll_line.DrawLine(gPad.GetUxmin(),nll.getVal(),gPad.GetUxmax(),nll.getVal())
+  nll_line.SetLineColor(kBlue)
+
   ratio_line = TLine()
   ratio_line.SetLineWidth(2)
   ratio_line.SetLineColor(kRed)
+
+  c2 = TCanvas('c2','Statistical interpretation (MC study)',1000,750)
+  c2.Divide(2,2)
+  # NLL function of fit to real data set
+  c2.cd(1)
+  ratioframe.Draw()
+  ratioframe.SetTitle('NLL function real data fit')
+  gPad.Update()
+  nll_line.DrawLine(-1.0,nll.getVal(),1.0,nll.getVal())
+  ratio_line.SetLineStyle(2)
   ratio_line.DrawLine(signal_ratio.getVal(),gPad.GetUymin(),signal_ratio.getVal(),gPad.GetUymax())
   ratio_line.SetLineStyle(7)
   ratio_line.DrawLine(signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymin(),signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymax())
+  # MC NLL value distribution
+  c2.cd(2)
+  nllframe.Draw()
+  nllframe.SetTitle('NLL distribution MC')
+  gPad.Update()
+  nll_line.DrawLine(nll.getVal(),gPad.GetUymin(),nll.getVal(),gPad.GetUymax())
   # MC ratio distribution
   c2.cd(3)
-  paramframe.Draw()
-  ratio_line.SetLineWidth(2)
-  ratio_line.SetLineColor(kRed)
+  ratioframe_MC.Draw()
+  ratioframe_MC.SetTitle('ratio distribution MC')
+  gPad.Update()
+  ratio_line.SetLineStyle(2)
   ratio_line.DrawLine(signal_ratio.getVal(),gPad.GetUymin(),signal_ratio.getVal(),gPad.GetUymax())
   ratio_line.SetLineStyle(7)
   ratio_line.DrawLine(signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymin(),signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymax())
+  c2.cd(4)
+  pullframe = MC_study.plotPull(signal_ratio)
+  pullframe.Draw()
+  pullframe.SetTitle('pull distribution MC')
