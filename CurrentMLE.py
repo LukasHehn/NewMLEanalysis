@@ -9,9 +9,9 @@ gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistri.C")
 
 
 #switches and input parameters to control script
-wimp_mass = 15 #set wimp mass or switch signal of entirely (with False)
-MC_sims = 1000 #set number of MC simulations: 0 means none at all
-cutset = False #use event set with 3 outlying events cut
+wimp_mass = False #set wimp mass or switch signal of entirely (with False)
+MC_sims = 10000 #set number of MC simulations: 0 means none at all
+cutset = True #use event set with 3 outlying events cut
 
 
 # definition of observables
@@ -202,7 +202,7 @@ final_pdf.plotOn(recframe, RooFit.Components("Co57_rec_pdf"), RooFit.LineColor(k
 final_pdf.plotOn(recframe, RooFit.Components("Zn65_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Ge68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Ga68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-final_pdf.paramOn(recframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.AutoPrecision(1)),RooFit.Layout(0.1,0.5,0.9),RooFit.ShowConstants(kTRUE))
+final_pdf.paramOn(recframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.AutoPrecision(1)),RooFit.Layout(0.1,0.7,0.9),RooFit.ShowConstants(kTRUE))
 red_chi2_rec = recframe.chiSquare("model", "data", ndf)
 print "reduced chi2 for rec:",red_chi2_rec
 
@@ -218,7 +218,7 @@ final_pdf.plotOn(ionframe, RooFit.Components("Co57_ion_pdf"), RooFit.LineColor(k
 final_pdf.plotOn(ionframe, RooFit.Components("Zn65_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Ge68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Ga68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-final_pdf.paramOn(ionframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.AutoPrecision(1)),RooFit.Layout(0.1,0.5,0.9),RooFit.ShowConstants(kTRUE))
+final_pdf.paramOn(ionframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.AutoPrecision(1)),RooFit.Layout(0.1,0.7,0.9),RooFit.ShowConstants(kTRUE))
 red_chi2_ion = ionframe.chiSquare("model", "data", ndf)
 red_chi2_ion_label = TPaveLabel()
 red_chi2_ion_label.SetLabel('test')
@@ -227,12 +227,6 @@ print "reduced chi2 for ion:",red_chi2_ion
 
 
 FitResults.Print('v')
-
-
-#print "wimp mass:",wimp_mass
-#print "signal ratio:",signal_ratio.getVal()
-#print "upper error:",signal_ratio.getErrorHi()
-#print "90% C.L. upper events:",(signal_ratio.getVal()+1.64*signal_ratio.getErrorHi())*events
 
 
 # plotting
@@ -255,8 +249,6 @@ NR_centroid.SetLineWidth(1)
 NR_centroid.DrawCopy('SAME')
 # wimp signal and data only
 if wimp_mass:
-  ratioframe = signal_ratio.frame()
-  nll.plotOn(ratioframe)
   c1.cd(3)
   signal_hist.Draw('CONT0')
   signal_hist.SetStats(0)
@@ -280,8 +272,21 @@ recframe.GetXaxis().SetRangeUser(3,25)
 if MC_sims:
   MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion))
   MC_study.generateAndFit(MC_sims,events,kTRUE)
-  nllframe = MC_study.plotNLL()
-  ratioframe_MC = MC_study.plotParam(signal_ratio)#,RooFit.FrameRange(ratio_range['min'],ratio_range['max']),RooFit.Binning(150))
+
+  if wimp_mass:
+    parameter = signal_ratio
+  else:
+    parameter = energy_correction_ion
+
+  paramframe_Fit = parameter.frame()
+  nll.plotOn(paramframe_Fit)
+  paramframe_Fit.SetTitle('NLL function of fit')
+  nllframe_MC = MC_study.plotNLL()
+  nllframe_MC.SetTitle('NLL dsitribution MC')
+  paramframe_MC = MC_study.plotParam(parameter)
+  paramframe_MC.SetTitle('parameter distribution MC')
+  pullframe_MC = MC_study.plotPull(parameter)#,RooFit.Binning(1000))
+  pullframe_MC.SetTitle('pull distribution MC')
 
   nll_line = TLine()
   nll_line.SetLineWidth(2)
@@ -295,30 +300,25 @@ if MC_sims:
   c2.Divide(2,2)
   # NLL function of fit to real data set
   c2.cd(1)
-  ratioframe.Draw()
-  ratioframe.SetTitle('NLL function real data fit')
+  paramframe_Fit.Draw()
   gPad.Update()
-  nll_line.DrawLine(-1.0,nll.getVal(),1.0,nll.getVal())
-  ratio_line.SetLineStyle(2)
-  ratio_line.DrawLine(signal_ratio.getVal(),gPad.GetUymin(),signal_ratio.getVal(),gPad.GetUymax())
+  nll_line.DrawLine(gPad.GetUxmin(),nll.getVal(),gPad.GetUxmax(),nll.getVal())
+  ratio_line.SetLineStyle(1)
+  ratio_line.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
   ratio_line.SetLineStyle(7)
-  ratio_line.DrawLine(signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymin(),signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymax())
+  ratio_line.DrawLine(parameter.getVal()+parameter.getErrorHi(),gPad.GetUymin(),parameter.getVal()+parameter.getErrorHi(),gPad.GetUymax())
   # MC NLL value distribution
   c2.cd(2)
-  nllframe.Draw()
-  nllframe.SetTitle('NLL distribution MC')
+  nllframe_MC.Draw()
   gPad.Update()
   nll_line.DrawLine(nll.getVal(),gPad.GetUymin(),nll.getVal(),gPad.GetUymax())
   # MC ratio distribution
   c2.cd(3)
-  ratioframe_MC.Draw()
-  ratioframe_MC.SetTitle('ratio distribution MC')
+  paramframe_MC.Draw()
   gPad.Update()
-  ratio_line.SetLineStyle(2)
-  ratio_line.DrawLine(signal_ratio.getVal(),gPad.GetUymin(),signal_ratio.getVal(),gPad.GetUymax())
+  ratio_line.SetLineStyle(1)
+  ratio_line.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
   ratio_line.SetLineStyle(7)
-  ratio_line.DrawLine(signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymin(),signal_ratio.getVal()+signal_ratio.getErrorHi(),gPad.GetUymax())
+  ratio_line.DrawLine(parameter.getVal()+parameter.getErrorHi(),gPad.GetUymin(),parameter.getVal()+parameter.getErrorHi(),gPad.GetUymax())
   c2.cd(4)
-  pullframe = MC_study.plotPull(signal_ratio)
-  pullframe.Draw()
-  pullframe.SetTitle('pull distribution MC')
+  pullframe_MC.Draw()
