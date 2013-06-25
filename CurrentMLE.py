@@ -9,8 +9,8 @@ gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistri.C")
 
 
 #switches and input parameters to control script
-wimp_mass = False #set wimp mass or switch signal of entirely (with False)
-MC_sims = 10000 #set number of MC simulations: 0 means none at all
+wimp_mass = 10 #set wimp mass or switch signal of entirely (with False)
+MC_sims = 100 #set number of MC simulations: 0 means none at all
 cutset = True #use event set with 3 outlying events cut
 
 
@@ -165,7 +165,7 @@ gamma_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList
 
 if wimp_mass:
   # combine signal and background
-  signal_ratio = RooRealVar('signal_ratio','signal_ratio',0.5,-0.1,1.0)
+  signal_ratio = RooRealVar('signal_ratio','signal_ratio',0.5,0.0,1.0)
   final_pdf = RooAddPdf('final_pdf','final_pdf',signal_pdf,gamma_bckgd_pdf,signal_ratio)
   params = RooArgSet(signal_ratio,energy_correction_rec,energy_correction_ion)
 else:
@@ -187,7 +187,6 @@ final_hist = final_pdf.createHistogram('final_hist',rec,RooFit.Binning(int((rec.
 
 recbins = int((rec.getMax()-rec.getMin())*5)
 ionbins = int((ion.getMax()-ion.getMin())*10)
-
 
 
 # RooFit frames
@@ -229,7 +228,7 @@ print "reduced chi2 for ion:",red_chi2_ion
 FitResults.Print('v')
 
 
-# plotting
+# Plotting of fit results (PDFs and projected spectra)
 c1 = TCanvas('c1','Fit Results',1000,750)
 c1.Divide(2,2)
 # final pdf and data
@@ -268,57 +267,71 @@ recframe.GetXaxis().SetRangeUser(3,25)
 
 
 # Monte Carlo statistics output
-# Monte Carlo
 if MC_sims:
   MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion))
   MC_study.generateAndFit(MC_sims,events,kTRUE)
 
-  if wimp_mass:
-    parameter = signal_ratio
-  else:
-    parameter = energy_correction_ion
+  FitParams = FitResults.floatParsFinal()
+  NumFitParams = FitParams.getSize()
 
-  paramframe_Fit = parameter.frame()
-  nll.plotOn(paramframe_Fit)
-  paramframe_Fit.SetTitle('NLL function of fit')
-  nllframe_MC = MC_study.plotNLL()
-  nllframe_MC.SetTitle('NLL dsitribution MC')
-  paramframe_MC = MC_study.plotParam(parameter)
-  paramframe_MC.SetTitle('parameter distribution MC')
-  pullframe_MC = MC_study.plotPull(parameter)#,RooFit.Binning(1000))
-  pullframe_MC.SetTitle('pull distribution MC')
+  ParamNLLFrameList = []
+  ParamDistriFrameList = []
+  ParamPullFrameList = []
+  ParamLineList = []
+
+  c2 = TCanvas('c2','Statistical interpretation (MC study)')
+  c2.Divide(1,NumFitParams,0.001,0.001)
 
   nll_line = TLine()
   nll_line.SetLineWidth(2)
+  nll_line.SetLineStyle(1)
   nll_line.SetLineColor(kBlue)
 
-  ratio_line = TLine()
-  ratio_line.SetLineWidth(2)
-  ratio_line.SetLineColor(kRed)
+  zeroline = TLine()
+  zeroline.SetLineWidth(2)
+  zeroline.SetLineStyle(1)
+  zeroline.SetLineColor(kMagenta)
 
-  c2 = TCanvas('c2','Statistical interpretation (MC study)',1000,750)
-  c2.Divide(2,2)
-  # NLL function of fit to real data set
-  c2.cd(1)
-  paramframe_Fit.Draw()
-  gPad.Update()
-  nll_line.DrawLine(gPad.GetUxmin(),nll.getVal(),gPad.GetUxmax(),nll.getVal())
-  ratio_line.SetLineStyle(1)
-  ratio_line.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
-  ratio_line.SetLineStyle(7)
-  ratio_line.DrawLine(parameter.getVal()+parameter.getErrorHi(),gPad.GetUymin(),parameter.getVal()+parameter.getErrorHi(),gPad.GetUymax())
-  # MC NLL value distribution
-  c2.cd(2)
-  nllframe_MC.Draw()
-  gPad.Update()
-  nll_line.DrawLine(nll.getVal(),gPad.GetUymin(),nll.getVal(),gPad.GetUymax())
-  # MC ratio distribution
-  c2.cd(3)
-  paramframe_MC.Draw()
-  gPad.Update()
-  ratio_line.SetLineStyle(1)
-  ratio_line.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
-  ratio_line.SetLineStyle(7)
-  ratio_line.DrawLine(parameter.getVal()+parameter.getErrorHi(),gPad.GetUymin(),parameter.getVal()+parameter.getErrorHi(),gPad.GetUymax())
-  c2.cd(4)
-  pullframe_MC.Draw()
+  for i in range(NumFitParams):
+    parameter = FitParams[i]
+    paramname = parameter.GetName()
+
+    paramline = TLine()
+    paramline.SetLineWidth(2)
+    paramline.SetLineStyle(1)
+    paramline.SetLineColor(kRed)
+    ParamLineList.append(paramline)
+
+    pad = c2.cd(i+1)
+    pad.Divide(3,1,0.001,0.001)
+
+    paramnllframe = parameter.frame()
+    paramnllframe.SetTitle('NLL fit '+paramname)
+    nll.plotOn(paramnllframe)
+    ParamNLLFrameList.append(paramnllframe)
+    pad.cd(1)
+    paramnllframe.Draw()
+    paramnllframe.GetYaxis().SetRangeUser(nll.getVal()-50,nll.getVal()+500)
+    gPad.Update()
+    nll_line.DrawLine(gPad.GetUxmin(),nll.getVal(),gPad.GetUxmax(),nll.getVal())
+    paramline.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
+
+    paramdistriframe = MC_study.plotParam(parameter)
+    paramdistriframe.SetTitle('MC distri '+paramname)
+    ParamDistriFrameList.append(paramdistriframe)
+    pad.cd(2)
+    paramdistriframe.Draw()
+    paramdistriframe.getHist().Fit('gaus')
+    gPad.Update()
+    paramline.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
+
+    parampullframe = (MC_study.plotPull(parameter))
+    parampullframe.SetTitle('MC pull distri '+paramname)
+    ParamPullFrameList.append(parampullframe)
+    pad.cd(3)
+    parampullframe.Draw()
+    parampullframe.getHist().Fit('gaus')
+    gPad.Update()
+    zeroline.DrawLine(0,gPad.GetUymin(),0,gPad.GetUymax())
+
+  c2.SetCanvasSize(1200,2400)
