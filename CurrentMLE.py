@@ -10,8 +10,8 @@ gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistri.C")
 
 #switches and input parameters to control script
 wimp_mass = 10 #set wimp mass or switch signal of entirely (with False)
-MC_sims = 100 #set number of MC simulations: 0 means none at all
-cutset = True #use event set with 3 outlying events cut
+MC_sims = 10 #set number of MC simulations: 0 means none at all
+cutset = False #use event set with 3 outlying events cut
 
 
 # definition of observables
@@ -47,8 +47,8 @@ events = int(realdata.numEntries())
 
 # -----------------------------------------------------------------------------------------
 # definition of gamma peaks
-energy_correction_ion = RooRealVar('energy_correction_ion','scaling factor ionization energy',0.5,1.5)
-energy_correction_rec = RooRealVar('energy_correction_rec','scaling factor recoil energy',0.5,1.5)
+energy_correction_ion = RooRealVar('energy_correction_ion','scaling factor ionization energy',1.0,0.8,1.2)
+energy_correction_rec = RooRealVar('energy_correction_rec','scaling factor recoil energy',1.0,0.8,1.2)
 ER_centroid.SetParameter(0,6.4) #ER_centroid used for calculation of peak position in Erec
 
 V49_ion_energy = RooRealVar('V49_ion_energy','V49 peak ion energy',4.97)
@@ -58,7 +58,8 @@ V49_rec_energy = RooRealVar('V49_rec_energy','recoil energy V49 peak',ER_centroi
 V49_rec_pos = RooFormulaVar('V49_rec_pos','@0*@1',RooArgList(V49_rec_energy,energy_correction_rec))
 V49_rec_pdf = RooGaussian('V49_rec_pdf','V49 peak pdf in recoil energy',rec,V49_rec_pos,sigma_rec)
 V49_pdf = RooProdPdf('V49_pdf','V49 peak pdf',V49_ion_pdf,V49_rec_pdf)
-V49_coeff = RooRealVar('V49_coeff','fraction of V49 peak (4.97keV)',0.5,0.0,1.0)
+V49_coeff = RooRealVar('V49_coeff','fraction of V49 peak (4.97keV)',0.5,0.,1.)
+V49_n = RooRealVar('V49_n','evts of V49 peak (4.97keV)',0.,0.,events)
 
 
 Cr51_ion_energy = RooRealVar('Cr51_ion_energy','Cr51 peak ion energy',5.46)
@@ -68,7 +69,8 @@ Cr51_rec_energy = RooRealVar('Cr51_rec_energy','v_rec_energy',ER_centroid.GetX(C
 Cr51_rec_pos = RooFormulaVar('Cr51_rec_pos','@0*@1',RooArgList(Cr51_rec_energy,energy_correction_rec))
 Cr51_rec = RooGaussian('Cr51_rec_pdf','Cr51_rec_pdf with shifted mean',rec,Cr51_rec_pos,sigma_rec)
 Cr51_pdf = RooProdPdf('Cr51_pdf','Cr51 peak pdf',Cr51_ion,Cr51_rec)
-Cr51_coeff = RooRealVar('Cr51_coeff','fraction of 51Cr peak (5.46keV)',0.5,0.0,1.0)
+Cr51_coeff = RooRealVar('Cr51_coeff','fraction of 51Cr peak (5.46keV)',0.5,0.,1.)
+Cr51_n = RooRealVar('Cr51_n','evts of 51Cr peak (5.46keV)',0.,0.,events)
 
 
 Mn54_ion_energy = RooRealVar('Mn54_ion_energy','Mn54_ion_energy',5.99)
@@ -78,7 +80,8 @@ Mn54_rec_energy = RooRealVar('Mn54_rec_energy','Mn54_rec_energy',ER_centroid.Get
 Mn54_rec_pos = RooFormulaVar('Mn54_rec_pos','@0*@1',RooArgList(Mn54_rec_energy,energy_correction_rec))
 Mn54_rec = RooGaussian('Mn54_rec_pdf','Mn54_rec_pdf with shifted mean',rec,Mn54_rec_pos,sigma_rec)
 Mn54_pdf = RooProdPdf('Mn54_pdf','Mn54 peak pdf',Mn54_ion,Mn54_rec)
-Mn54_coeff = RooRealVar('Mn54_coeff','fraction of 54Mn peak (5.99keV)',0.5,0.0,1.0)
+Mn54_coeff = RooRealVar('Mn54_coeff','fraction of 54Mn peak (5.99keV)',0.5,0.,1.)
+Mn54_n = RooRealVar('Mn54_n','evts of 54Mn peak (5.99keV)',0.,0.,events)
 
 
 Fe55_ion_energy = RooRealVar('Fe55_ion_energy','Fe55_ion_energy',6.54)
@@ -88,7 +91,8 @@ Fe55_rec_energy = RooRealVar('Fe55_rec_energy','Fe55_rec_energy',ER_centroid.Get
 Fe55_rec_pos = RooFormulaVar('Fe55_rec_pos','@0*@1',RooArgList(Fe55_rec_energy,energy_correction_rec))
 Fe55_rec = RooGaussian('Fe55_rec_pdf','Fe55_rec_pdf with shifted mean',rec,Fe55_rec_pos,sigma_rec)
 Fe55_pdf = RooProdPdf('Fe55_pdf','Fe55 peak pdf',Fe55_ion,Fe55_rec)
-Fe55_coeff = RooRealVar('Fe55_coeff','fraction of 55Fe peak (6.54keV)',0.5,0.0,1.0)
+Fe55_coeff = RooRealVar('Fe55_coeff','fraction of 55Fe peak (6.54keV)',0.5,0.,1.)
+Fe55_n = RooRealVar('Fe55_n','evts of 55Fe peak (6.54keV)',0.,0.,events)
 
 
 Co57_ion_energy = RooRealVar('Co57_ion_energy','Co57_ion_energy',7.11)
@@ -98,7 +102,8 @@ Co57_rec_energy = RooRealVar('Co57_rec_energy','Co57_rec_energy',ER_centroid.Get
 Co57_rec_pos = RooFormulaVar('Co57_rec_pos','@0*@1',RooArgList(Co57_rec_energy,energy_correction_rec))
 Co57_rec = RooGaussian('Co57_rec_pdf','Co57_rec_pdf with shifted mean',rec,Co57_rec_pos,sigma_rec)
 Co57_pdf = RooProdPdf('Co57_pdf','Co57 peak pdf',Co57_ion,Co57_rec)
-Co57_coeff = RooRealVar('Co57_coeff','fraction of 57Co peak (7.11keV)',0.5,0.0,1.0)
+Co57_coeff = RooRealVar('Co57_coeff','fraction of 57Co peak (7.11keV)',0.5,0.,1.)
+Co57_n = RooRealVar('Co57_n','evts of 57Co peak (7.11keV)',0.,0.,events)
 
 
 Zn65_ion_energy = RooRealVar('Zn65_ion_energy','Zn65_ion_energy',8.98)
@@ -108,7 +113,8 @@ Zn65_rec_energy = RooRealVar('Zn65_rec_energy','Zn65_rec_energy',ER_centroid.Get
 Zn65_rec_pos = RooFormulaVar('Zn65_rec_pos','@0*@1',RooArgList(Zn65_rec_energy,energy_correction_rec))
 Zn65_rec = RooGaussian('Zn65_rec_pdf','Zn65_rec_pdf with shifted mean',rec,Zn65_rec_pos,sigma_rec)
 Zn65_pdf = RooProdPdf('Zn65_pdf','Zn65 peak pdf',Zn65_ion,Zn65_rec)
-Zn65_coeff = RooRealVar('Zn65_coeff','fraction of 65Zn peak (8.98keV)',0.5,0.0,1.0)
+Zn65_coeff = RooRealVar('Zn65_coeff','fraction of 65Zn peak (8.98keV)',0.5,0.,1.)
+Zn65_n = RooRealVar('Zn65_n','evts of 65Zn peak (8.98keV)',0.,0.,events)
 
 
 Ga68_ion_energy = RooRealVar('Ga68_ion_energy','Ga68_ion_energy',9.66)
@@ -118,7 +124,8 @@ Ga68_rec_energy = RooRealVar('Ga68_rec_energy','Ga68_rec_energy',ER_centroid.Get
 Ga68_rec_pos = RooFormulaVar('Ga68_rec_pos','@0*@1',RooArgList(Ga68_rec_energy,energy_correction_rec))
 Ga68_rec = RooGaussian('Ga68_rec_pdf','Ga68_rec_pdf with shifted mean',rec,Ga68_rec_pos,sigma_rec)
 Ga68_pdf = RooProdPdf('Ga68_pdf','Ga68 peak pdf',Ga68_ion,Ga68_rec)
-Ga68_coeff = RooRealVar('Ga68_coeff','fraction of 68Ga peak (9.66keV)',0.5,0.0,1.0)
+Ga68_coeff = RooRealVar('Ga68_coeff','fraction of 68Ga peak (9.66keV)',0.5,0.,1.)
+Ga68_n = RooRealVar('Ga68_n','evts of 68Ga peak (9.66keV)',0.,0.,events)
 
 
 Ge68_ion_energy = RooRealVar('Ge68_ion_energy','Ge68_ion_energy',10.37)
@@ -128,7 +135,8 @@ Ge68_rec_energy = RooRealVar('Ge68_rec_energy','Ge68_rec_energy',ER_centroid.Get
 Ge68_rec_pos = RooFormulaVar('Ge68_rec_pos','@0*@1',RooArgList(Ge68_rec_energy,energy_correction_rec))
 Ge68_rec = RooGaussian('Ge68_rec_pdf','Ge68 peak pdf in rec',rec,Ge68_rec_pos,sigma_rec)
 Ge68_pdf = RooProdPdf('Ge68_pdf','Ge68 peak pdf',Ge68_ion,Ge68_rec)
-Ge68_coeff = RooRealVar('Ge68_coeff','fraction of 68Ge peak (10.37keV)',0.5,0.0,1.0)
+Ge68_coeff = RooRealVar('Ge68_coeff','fraction of 68Ge peak (10.37keV)',0.5,0.,1.)
+Ge68_n = RooRealVar('Ge68_n','evts of 68Ge peak (10.37keV)',0.,0.,events)
 # -----------------------------------------------------------------------------------------
 
 
@@ -153,8 +161,8 @@ flat_gamma_bckgd_datahist = RooDataHist('flat_gamma_bckgd_datahist','flat_gamma_
 flat_gamma_bckgd_pdf = RooHistPdf('flat_gamma_bckgd_pdf','flat_gamma_bckgd_pdf',RooArgSet(rec,ion),flat_gamma_bckgd_datahist)
 
 
-# normal gamma bckgd model with peaks
-gamma_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList(V49_pdf, Cr51_pdf, Mn54_pdf, Fe55_pdf, Co57_pdf, Zn65_pdf, Ga68_pdf, Ge68_pdf, flat_gamma_bckgd_pdf),RooArgList(V49_coeff, Cr51_coeff, Mn54_coeff, Fe55_coeff, Co57_coeff, Zn65_coeff, Ga68_coeff, Ge68_coeff),kTRUE)
+## normal gamma bckgd model with peaks
+#gamma_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList(V49_pdf, Cr51_pdf, Mn54_pdf, Fe55_pdf, Co57_pdf, Zn65_pdf, Ga68_pdf, Ge68_pdf, flat_gamma_bckgd_pdf),RooArgList(V49_coeff, Cr51_coeff, Mn54_coeff, Fe55_coeff, Co57_coeff, Zn65_coeff, Ga68_coeff, Ge68_coeff),kTRUE)
 
 
 ## initial background fit only
@@ -165,31 +173,35 @@ gamma_bckgd_pdf = RooAddPdf('combined_bckgd_pdf','combined_bckgd_pdf',RooArgList
 
 if wimp_mass:
   # combine signal and background
-  signal_ratio = RooRealVar('signal_ratio','signal_ratio',0.5,0.0,1.0)
-  final_pdf = RooAddPdf('final_pdf','final_pdf',signal_pdf,gamma_bckgd_pdf,signal_ratio)
-  params = RooArgSet(signal_ratio,energy_correction_rec,energy_correction_ion)
+  #signal_ratio = RooRealVar('signal_ratio','signal_ratio',0.5,0.0,1.0)
+  signal_n = RooRealVar('signal_n','WIMP signal events',0.,0.,events)
+  flat_n = RooRealVar('bckgd_b','flat gamma bckgd events',events,0.,events)
+  #final_pdf = RooAddPdf('final_pdf','final_pdf',signal_pdf,gamma_bckgd_pdf,signal_ratio)
+  # extended final pdf
+  final_pdf = RooAddPdf('final_pdf','final_pdf',RooArgList(V49_pdf, Mn54_pdf, Fe55_pdf, Zn65_pdf, Ga68_pdf, Ge68_pdf, flat_gamma_bckgd_pdf, signal_pdf),RooArgList(V49_n, Mn54_n, Fe55_n, Zn65_n, Ga68_n, Ge68_n, flat_n, signal_n))
+  params = RooArgSet(signal_n,energy_correction_rec,energy_correction_ion)
 else:
   final_pdf = gamma_bckgd_pdf
   params = RooArgSet(energy_correction_rec,energy_correction_ion)
 
 # manual mode
-nll = RooNLLVar('nll','nll',final_pdf,realdata,RooFit.PrintEvalErrors(2))
+nll = RooNLLVar('nll','nll',final_pdf,realdata,RooFit.NumCPU(2),RooFit.PrintEvalErrors(2),RooFit.Extended(kTRUE))
 minuit = RooMinuit(nll)
 FitResults = minuit.fit('hvr')
-
-
 ndf = FitResults.floatParsFinal().getSize()
+
+FitResults.Print('v')
 
 
 # histogram
 final_hist = final_pdf.createHistogram('final_hist',rec,RooFit.Binning(int((rec.getMax()-rec.getMin())*10)),RooFit.YVar(ion,RooFit.Binning(int((ion.getMax()-ion.getMin())*10))))
 
 
+# RooFit frames
 recbins = int((rec.getMax()-rec.getMin())*5)
 ionbins = int((ion.getMax()-ion.getMin())*10)
 
 
-# RooFit frames
 recframe = rec.frame()
 realdata.plotOn(recframe, RooFit.Name("data"), RooFit.Binning(recbins), RooFit.MarkerColor(kBlack), RooFit.MarkerSize(1.0))
 final_pdf.plotOn(recframe, RooFit.Name('model'), RooFit.LineColor(kBlue), RooFit.LineWidth(2))
@@ -201,6 +213,7 @@ final_pdf.plotOn(recframe, RooFit.Components("Co57_rec_pdf"), RooFit.LineColor(k
 final_pdf.plotOn(recframe, RooFit.Components("Zn65_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Ge68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Ga68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(recframe, RooFit.Components("signal_pdf"), RooFit.LineColor(kMagenta), RooFit.LineWidth(3))
 final_pdf.paramOn(recframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.AutoPrecision(1)),RooFit.Layout(0.1,0.7,0.9),RooFit.ShowConstants(kTRUE))
 red_chi2_rec = recframe.chiSquare("model", "data", ndf)
 print "reduced chi2 for rec:",red_chi2_rec
@@ -217,15 +230,10 @@ final_pdf.plotOn(ionframe, RooFit.Components("Co57_ion_pdf"), RooFit.LineColor(k
 final_pdf.plotOn(ionframe, RooFit.Components("Zn65_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Ge68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Ga68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-final_pdf.paramOn(ionframe,RooFit.Parameters(params),RooFit.Format('NEU',RooFit.AutoPrecision(1)),RooFit.Layout(0.1,0.7,0.9),RooFit.ShowConstants(kTRUE))
+final_pdf.plotOn(ionframe, RooFit.Components("signal_pdf"), RooFit.LineColor(kMagenta), RooFit.LineWidth(3))
+final_pdf.paramOn(ionframe,RooFit.Format('NEU',RooFit.AutoPrecision(2)),RooFit.Layout(0.1,0.7,0.9),RooFit.ShowConstants(kTRUE))#,RooFit.Parameters(params)
 red_chi2_ion = ionframe.chiSquare("model", "data", ndf)
-red_chi2_ion_label = TPaveLabel()
-red_chi2_ion_label.SetLabel('test')
-ionframe.addObject(red_chi2_ion_label)
 print "reduced chi2 for ion:",red_chi2_ion
-
-
-FitResults.Print('v')
 
 
 # Plotting of fit results (PDFs and projected spectra)
@@ -258,12 +266,12 @@ if wimp_mass:
 c1.cd(2)
 ionframe.Draw()
 ionframe.SetTitle('Projection in E_{ion}')
-ionframe.GetXaxis().SetRangeUser(1,13.5)
+#ionframe.GetXaxis().SetRangeUser(1,13.5)
 # data and fit in recoil energy
 c1.cd(4)
 recframe.Draw()
 recframe.SetTitle('Projection in E_{rec}')
-recframe.GetXaxis().SetRangeUser(3,25)
+#recframe.GetXaxis().SetRangeUser(3,25)
 
 
 # Monte Carlo statistics output
@@ -307,6 +315,7 @@ if MC_sims:
 
     paramnllframe = parameter.frame()
     paramnllframe.SetTitle('NLL fit '+paramname)
+    paramnllframe.SetTitleSize(100,'t')
     nll.plotOn(paramnllframe)
     ParamNLLFrameList.append(paramnllframe)
     pad.cd(1)
@@ -318,6 +327,7 @@ if MC_sims:
 
     paramdistriframe = MC_study.plotParam(parameter)
     paramdistriframe.SetTitle('MC distri '+paramname)
+    paramdistriframe.SetTitleSize(100,'t')
     ParamDistriFrameList.append(paramdistriframe)
     pad.cd(2)
     paramdistriframe.Draw()
@@ -327,6 +337,7 @@ if MC_sims:
 
     parampullframe = (MC_study.plotPull(parameter))
     parampullframe.SetTitle('MC pull distri '+paramname)
+    parampullframe.SetTitleSize(100,'t')
     ParamPullFrameList.append(parampullframe)
     pad.cd(3)
     parampullframe.Draw()
