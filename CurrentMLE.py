@@ -10,7 +10,7 @@ gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistri.C")
 
 #switches and input parameters to control script
 wimp_mass = 10 #set wimp mass or switch signal of entirely (with False)
-MC_sims = int(2e3) #set number of MC simulations: 0 means none at all
+MC_sims = int(1e1) #set number of MC simulations: 0 means none at all
 cutset = False #use event set with 3 outlying events cut
 
 
@@ -170,10 +170,14 @@ else:
 # manual mode
 nll = RooNLLVar('nll','nll',final_pdf,realdata,RooFit.NumCPU(2),RooFit.PrintEvalErrors(2),RooFit.Extended(kTRUE))
 minuit = RooMinuit(nll)
-FitResults = minuit.fit('hvr')
-ndf = FitResults.floatParsFinal().getSize()
+#FitResult = minuit.fit('hvr')
+minuit.migrad() #find minimum
+minuit.hesse() #symetric errors
+minuit.minos() #asymetric errors
+FitResult = minuit.save('realfit','fit to real data')
+ndf = FitResult.floatParsFinal().getSize()
 
-FitResults.Print('v')
+FitResult.Print('v')
 
 
 # histogram
@@ -260,7 +264,7 @@ if MC_sims:
   MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion),RooFit.Extended(kTRUE))
   MC_study.generateAndFit(MC_sims,events,kFALSE)
 
-  FitParams = FitResults.floatParsFinal()
+  FitParams = FitResult.floatParsFinal()
   NumFitParams = FitParams.getSize()
 
   ParamNLLFrameList = []
@@ -326,10 +330,10 @@ if MC_sims:
 
   # extra canvas for signal parameter only
   if wimp_mass:
-    parameter = FitResults.floatParsFinal().find('N_signal')
+    parameter = FitResult.floatParsFinal().find('N_signal')
     paramname = parameter.GetName()
 
-    #nllvalue = FitResults.minNll()
+    #nllvalue = FitResult.minNll()
     nllvalue = nll.getVal()
 
     c3 = TCanvas('c3','Fit Statistics WIMP Signal',1000,750)
@@ -342,7 +346,7 @@ if MC_sims:
     paramnllframe.SetMinimum(nllvalue-1)
     paramnllframe.Draw()
     gPad.Update()
-    #nll_line.DrawLine(gPad.GetUxmin(),nllvalue,gPad.GetUxmax(),nllvalue)
+    nll_line.DrawLine(gPad.GetUxmin(),nllvalue,gPad.GetUxmax(),nllvalue)
     paramline.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
 
     c3.cd(2)
