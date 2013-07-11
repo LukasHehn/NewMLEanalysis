@@ -70,27 +70,6 @@ def date_to_unixtime(date):
 
 
 # root functions
-
-
-# Lindhard quenching relation (nuclear recoil)
-LindhardQuenching = TF1('lindhard_quenching','[0]*(x^[1])', 0, 30)
-LindhardQuenching.SetParName(0,'a')
-LindhardQuenching.SetParName(1,'b')
-LindhardQuenching.FixParameter(0, 0.16)
-LindhardQuenching.FixParameter(1, 0.18)
-LindhardQuenching.SetNpx(1000)
-LindhardQuenching.SetTitle('Lindhard Quenching for Nuclear Recoils;E_{Recoil} [keV];Q(E_{Rec})')
-
-
-# Recoil energy estimator for nuclear recoils
-RecoilEstimator = TF1('recoil_energy_estimator','(x/(1+[0]/[1]))*(1+[0]/[1]*0.16*x^0.18)', 0, 30)
-RecoilEstimator.SetParName(0,'Voltage')
-RecoilEstimator.SetParName(1,'Creation Potential')
-RecoilEstimator.FixParameter(1,3.0)
-#RecoilEstimator.SetNpx(1000)
-RecoilEstimator.SetTitle('E_{Rec} estimator from E_{Heat};E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
-
-
 # trigger efficiency from DAQ trigger threshold and resolution on heat channel
 TriggerEfficiency = TF1('trigger_efficiency','0.5*(1+ROOT::Math::erf(((x-[0])/([1]*sqrt(2)))))', 0, 20)
 TriggerEfficiency.SetNpx(1000)
@@ -108,21 +87,38 @@ FiducialEfficiency.SetParName(2,'Maximum')
 FiducialEfficiency.SetTitle('Fiducial Efficiency;E_{ion} (keV_{ee});Efficiency')
 
 
+# Lindhard quenching relation (nuclear recoil)
+LindhardQuenching = TF1('lindhard_quenching','[0]*(x^[1])', 0, 30)
+LindhardQuenching.SetParName(0,'a')
+LindhardQuenching.SetParName(1,'b')
+LindhardQuenching.FixParameter(0, 0.16)
+LindhardQuenching.FixParameter(1, 0.18)
+LindhardQuenching.SetTitle('Lindhard Quenching for Nuclear Recoils;E_{Recoil} [keV];Q(E_{Rec})')
+
+
+# Recoil energy estimator for nuclear recoils
+RecoilEstimator = TF1('recoil_energy_estimator','(x/(1+[0]/[1]))*(1+[0]/[1]*0.16*x^0.18)', 0, 30)
+RecoilEstimator.SetParName(0,'Voltage')
+RecoilEstimator.SetParName(1,'Creation Potential')
+RecoilEstimator.FixParameter(1,3.0)
+RecoilEstimator.SetTitle('E_{Rec} estimator from E_{Heat};E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
+
+
 # centroids of ER and NR band
 def ER_centroid_function(x, par):
       xx =x[0]
       f = xx*(1+(0.16*xx**(0.18+0j))*(par[0]/3))/(1+par[0]/3)
       return f.real
-
 ER_centroid_real = TF1("ER_centroid_real", ER_centroid_function, -10, 30, 1)
 ER_centroid_real.SetParameter(0, 6.4)
-ER_centroid_real.SetNpx(1000)
+ER_centroid_real.SetTitle('Electron Recoil Centroid (Real Part Only);E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
 
 ER_centroid = TF1('ER_centroid','x*(1+(0.16*x^0.18)*([0]/3))/(1+[0]/3)',0,30)
 ER_centroid.SetParName(0,'voltage')
-ER_centroid.SetNpx(1000)
+ER_centroid_real.SetTitle('Electron Recoil Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
+
 NR_centroid = TF1('NR_centroid','0.16*x^1.18',0,30)
-NR_centroid.SetNpx(1000)
+NR_centroid.SetTitle('Nuclear Recoil Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
 
 
 def RecoilResolutionFromHeat(FWHM_heat,voltage,Erec):
