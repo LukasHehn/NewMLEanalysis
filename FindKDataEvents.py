@@ -8,15 +8,16 @@ import Functions
 DetectorName = 'ID3'
 KDataFile = 'Data/Run12_ID3_bckg_with_subrecords.root'
 OutFileName = 'Data/ID3_Recalibration_Test.txt'
-EnergyIonMax = 14
-EnergyRecMax = 25
+EnergyIonMax = 6
+EnergyRecMax = 13
 IonFactor = 1.0
 HeatFactor = 1.0
 Voltage = 6.4
 
 CUTS = EricsLowEnergyCuts['ID3']
-TimeList,RecList,IonList = [],[],[]
-eventcounter = 0
+TimeList,RecList,IonList = [],[],[] #for normal event selection
+TimeListCuts,RecListCuts,IonListCuts = [],[],[] #for additional cut event selection
+eventcounter, cutcounter = 0, 0
 
 infile = KDataReader(KDataFile)
 
@@ -31,9 +32,9 @@ for entry in range(entries):
   infile.GetEntry(entry)
   bolos = event.GetNumBolos()
 
-  #for bolonum in range(bolos):
-  if bolos == 1:
-    bolonum = 0
+  for bolonum in range(bolos):
+  #if bolos == 1:
+    #bolonum = 0
 
     #bolo records
     bolo = event.GetBolo(bolonum)
@@ -59,19 +60,25 @@ for entry in range(entries):
        and CUTS['Guard2']['Min']<bolo.GetBaselineNoiseGuard(2)<CUTS['Guard2']['Max']\
        and bolo.GetEventFlag()==2\
        and bolo.GetVoltageFlag>=0\
-       and bolo.TestCutsBit(6)==True\
-       and bolo.GetIonPulseTimeOffset()<600:
+       and bolo.GetIonPulseTimeOffset()<600: #       and bolo.TestCutsBit(6)==True\
         EnergyRec = Functions.GetEnergyRecoilFromEstimator(EnergyHeat, Voltage)
         if 0 < EnergyIon < EnergyIonMax and 0 < EnergyRec < EnergyRecMax:
-          TimeList.append(UnixTime)
-          IonList.append(EnergyIon)
-          RecList.append(EnergyRec)
-          print 'Event: {0:6}, time: {1:8}, E_heat: {2:4.1f}, E_rec: {3:4.1f}, E_ion: {4:4.1f}'.format(EventNumber, UnixTime, EnergyHeat, EnergyRec, EnergyIon)
-          eventcounter += 1
-
+          print 'Entry: {0:6};Event: {1:6}; time: {2:8}; E_heat: {3:4.1f}; E_rec: {4:4.1f}; E_ion: {5:4.1f}'.format(entry,EventNumber, UnixTime, EnergyHeat, EnergyRec, EnergyIon)
+          if bolo.TestCutsBit(6) == True:
+            TimeList.append(UnixTime)
+            IonList.append(EnergyIon)
+            RecList.append(EnergyRec)
+            eventcounter += 1
+          else:
+            print False
+            TimeListCuts.append(UnixTime)
+            IonListCuts.append(EnergyIon)
+            RecListCuts.append(EnergyRec)
+            cutcounter += 1
 infile.Close()
 
-print "KData: %i events passed all cuts" % eventcounter
+print "%i events passed all standard cuts" % eventcounter
+print "%i events failed additional cut" % cutcounter
 
 # write events in txt-file
 if OutFileName:
@@ -92,13 +99,24 @@ for i in range(eventcounter):
   EnergyRec = RecList[i]
   EnergyIon = IonList[i]
   EventGraph.SetPoint(i,EnergyRec,EnergyIon)
-
 EventGraph.GetXaxis().SetTitle('E_{rec} [keVnr]')
 EventGraph.GetYaxis().SetTitle('E_{ion} [keVee]')
+
+# same for additional set of special cut events
+EventGraphCuts = TGraph()
+for i in range(cutcounter):
+  EnergyRec = RecListCuts[i]
+  EnergyIon = IonListCuts[i]
+  EventGraphCuts.SetPoint(i,EnergyRec,EnergyIon)
+EventGraphCuts.GetXaxis().SetTitle('E_{rec} [keVnr]')
+EventGraphCuts.GetYaxis().SetTitle('E_{ion} [keVee]')
 
 c1 = TCanvas('c1','Event selection for ID3',800,600)
 EventGraph.SetMarkerStyle(kPlus)
 EventGraph.Draw('AP')
+EventGraphCuts.SetMarkerStyle(kFullDotLarge)
+EventGraphCuts.SetMarkerColor(kMagenta)
+EventGraphCuts.Draw('PSAME')
 
 # add lines for Electron Recoil and Nuclear Recoil centroids
 Functions.ER_centroid.SetParameter(0,6.4)

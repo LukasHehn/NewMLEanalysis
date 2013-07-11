@@ -5,13 +5,13 @@ from DetectorClass import *
 
 
 # load Eric's WIMP signal file
-gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistri.C")
+gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistriRangeExtended.C")
 
 
 #switches and input parameters to control script
 wimp_mass = 10 #set wimp mass or switch signal of entirely (with False)
-MC_sims = int(1e3) #set number of MC simulations: 0 means none at all
-cutset = False #use event set with 3 outlying events cut
+MC_sims = int(1e1) #set number of MC simulations: 0 means none at all
+cutset = 1 #use event sets with outlying events cut
 
 
 # definition of observables
@@ -39,7 +39,9 @@ sigma_ion = RooRealVar('sigma_ion','ionization energy resolution',FWHM_ion/2.35)
 
 
 # dataset
-if cutset: realdata = RooDataSet.read('ID3-eventlist_30keV_cut3.txt',RooArgList(time,rec,ion)) #without 3 outlying events
+if cutset == 3: realdata = RooDataSet.read('ID3-eventlist_30keV_cut3.txt',RooArgList(time,rec,ion)) #without 3 outlying events
+elif cutset == 2: realdata = RooDataSet.read('ID3-eventlist_30keV_cut2.txt',RooArgList(time,rec,ion)) #without 2 NR events
+elif cutset == 1: realdata = RooDataSet.read('ID3-eventlist_30keV_cut1.txt',RooArgList(time,rec,ion)) #without 1 event in the NR band Eric doesn't have
 else: realdata = RooDataSet.read('ID3-eventlist_30keV.txt',RooArgList(time,rec,ion))
 realdata_scatter = realdata.createHistogram(rec,ion,Energy['rec']['bins'],Energy['ion']['bins'])
 realdata_graph = TGraphFromDataSet(realdata)
@@ -60,7 +62,7 @@ V49_rec_pos = RooFormulaVar('V49_rec_pos','@0*@1',RooArgList(V49_rec_energy,rec_
 V49_rec_pdf = RooGaussian('V49_rec_pdf','V49 peak pdf in recoil energy',rec,V49_rec_pos,sigma_rec)
 V49_pdf = RooProdPdf('V49_pdf','V49 peak pdf',V49_ion_pdf,V49_rec_pdf)
 V49_pdf_eff = RooProdPdf('V49_pdf_eff','eff corr V49 peak pdf',V49_pdf,total_efficiency_pdf)
-N_V49 = RooRealVar('N_V49','evts of V49 peak (4.97keV)',19.,-10.,50.)
+N_V49 = RooRealVar('N_V49','evts of V49 peak (4.97keV)',19.,0.,50.)
 
 
 Cr51_ion_energy = RooRealVar('Cr51_ion_energy','Cr51 peak ion energy',5.46)
@@ -70,7 +72,7 @@ Cr51_rec_energy = RooRealVar('Cr51_rec_energy','v_rec_energy',ER_centroid.GetX(C
 Cr51_rec_pos = RooFormulaVar('Cr51_rec_pos','@0*@1',RooArgList(Cr51_rec_energy,rec_scaling))
 Cr51_rec = RooGaussian('Cr51_rec_pdf','Cr51_rec_pdf with shifted mean',rec,Cr51_rec_pos,sigma_rec)
 Cr51_pdf = RooProdPdf('Cr51_pdf','Cr51 peak pdf',Cr51_ion,Cr51_rec)
-N_Cr51 = RooRealVar('N_Cr51','evts of 51Cr peak (5.46keV)',25.,-10.,50.)
+N_Cr51 = RooRealVar('N_Cr51','evts of 51Cr peak (5.46keV)',25.,0.,50.)
 
 
 Mn54_ion_energy = RooRealVar('Mn54_ion_energy','Mn54_ion_energy',5.99)
@@ -80,7 +82,7 @@ Mn54_rec_energy = RooRealVar('Mn54_rec_energy','Mn54_rec_energy',ER_centroid.Get
 Mn54_rec_pos = RooFormulaVar('Mn54_rec_pos','@0*@1',RooArgList(Mn54_rec_energy,rec_scaling))
 Mn54_rec = RooGaussian('Mn54_rec_pdf','Mn54_rec_pdf with shifted mean',rec,Mn54_rec_pos,sigma_rec)
 Mn54_pdf = RooProdPdf('Mn54_pdf','Mn54 peak pdf',Mn54_ion,Mn54_rec)
-N_Mn54 = RooRealVar('N_Mn54','evts of 54Mn peak (5.99keV)',7.,-10.,30.)
+N_Mn54 = RooRealVar('N_Mn54','evts of 54Mn peak (5.99keV)',7.,0.,30.)
 
 
 Fe55_ion_energy = RooRealVar('Fe55_ion_energy','Fe55_ion_energy',6.54)
@@ -90,7 +92,7 @@ Fe55_rec_energy = RooRealVar('Fe55_rec_energy','Fe55_rec_energy',ER_centroid.Get
 Fe55_rec_pos = RooFormulaVar('Fe55_rec_pos','@0*@1',RooArgList(Fe55_rec_energy,rec_scaling))
 Fe55_rec = RooGaussian('Fe55_rec_pdf','Fe55_rec_pdf with shifted mean',rec,Fe55_rec_pos,sigma_rec)
 Fe55_pdf = RooProdPdf('Fe55_pdf','Fe55 peak pdf',Fe55_ion,Fe55_rec)
-N_Fe55 = RooRealVar('N_Fe55','evts of 55Fe peak (6.54keV)',24.,-10.,60.)
+N_Fe55 = RooRealVar('N_Fe55','evts of 55Fe peak (6.54keV)',24.,0.,60.)
 
 
 Co57_ion_energy = RooRealVar('Co57_ion_energy','Co57_ion_energy',7.11)
@@ -137,7 +139,7 @@ N_Ge68 = RooRealVar('N_Ge68','evts of 68Ge peak (10.37keV)',317.,200.,400.)
 if wimp_mass:
   TriggerEfficiency.SetParameter(0, 3.874)
   TriggerEfficiency.SetParameter(1, FWHM_rec)
-  TriggerEfficiency.SetNpx(1000)
+  TriggerEfficiency.SetNpx(250)
   trigger_efficiency = TriggerEfficiency.GetHistogram()
 
   FiducialEfficiency.SetParameter(0, -1.876)
@@ -150,7 +152,7 @@ if wimp_mass:
   signal_hist.SetTitle('WIMP signal %sGeV'%wimp_mass)
   signal_datahist = RooDataHist('signal_datahist','signal_datahist',RooArgList(rec,ion),signal_hist)
   signal_pdf = RooHistPdf('signal_pdf','signal_pdf',RooArgSet(rec,ion),signal_datahist)
-  N_signal = RooRealVar('N_signal','WIMP signal events',0.,-10.,10.)
+  N_signal = RooRealVar('N_signal','WIMP signal events',0.,0.,10.)
 
 
 # flat gamma background component
@@ -191,7 +193,7 @@ if wimp_mass:
   rate = signal_hist.Integral('WIDTH')
   signal_events = rate * livetime * mass * 1e6
   sigma_limit = wimp_events_limit / signal_events
-  print 'cross section limit: {0:8.1e}'.format(sigma_limit)
+  print 'cross section limit: {0:8.1e} pb'.format(sigma_limit)
 
 
 
@@ -216,7 +218,7 @@ final_pdf.plotOn(ionframe, RooFit.Components("Zn65_ion_pdf"), RooFit.LineColor(k
 final_pdf.plotOn(ionframe, RooFit.Components("Ge68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Ga68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("signal_pdf"), RooFit.LineColor(kMagenta), RooFit.LineWidth(3))
-final_pdf.paramOn(ionframe,RooFit.Format('NEU',RooFit.AutoPrecision(2)),RooFit.Layout(0.1,0.5,0.9),RooFit.ShowConstants(kFALSE))
+final_pdf.paramOn(ionframe,RooFit.Format('NEU',RooFit.AutoPrecision(2)),RooFit.Layout(0.1,0.65,0.9),RooFit.ShowConstants(kFALSE))
 red_chi2_ion = ionframe.chiSquare("model", "data", ndf)
 print "reduced chi2 for ion:",red_chi2_ion
 
@@ -377,7 +379,7 @@ if MC_sims:
     paramline.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
 
     c3.cd(3)
-    parampullframe = (MC_study.plotPull(parameter,RooFit.FitGauss(kTRUE)))
+    parampullframe = (MC_study.plotPull(parameter,RooFit.Range(-10,10),RooFit.FitGauss(kTRUE)))
     parampullframe.SetTitle('MC pull distri'+paramname)
     parampullframe.Draw()
     gPad.Update()
