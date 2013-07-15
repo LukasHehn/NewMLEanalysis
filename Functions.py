@@ -116,14 +116,32 @@ ER_centroid_real.SetNpx(3000)
 ER_centroid_real.SetParameter(0, 6.4)
 ER_centroid_real.SetTitle('Electron Recoil Centroid (Real Part Only);E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
 
-ER_centroid = TF1('ER_centroid','x*(1+(0.16*x^0.18)*([0]/3))/(1+[0]/3)',0,25)
-ER_centroid.SetNpx(2500)
-ER_centroid.SetParName(0,'voltage')
-ER_centroid_real.SetTitle('Electron Recoil Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
+#ER_centroid = TF1('ER_centroid','x*(1+(0.16*x^0.18)*([0]/[1]))/(1+[0]/[1])',0,25)
+#ER_centroid.SetNpx(2500)
+#ER_centroid.SetParName(0,'Voltage')
+#ER_centroid.SetParName(1,'Creation Potential')
+#ER_centroid.FixParameter(1,3.0)
+#ER_centroid_real.SetTitle('Electron Recoil Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
+
 
 NR_centroid = TF1('NR_centroid','0.16*x^1.18',0,25)
 NR_centroid.SetNpx(2500)
 NR_centroid.SetTitle('Nuclear Recoil Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
+
+
+ER_centroid = RecoilEstimator.Clone('ER_centroid')
+ER_centroid.SetTitle('Electron Recoil Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
+
+
+ER_centroid_cut = TF1('ER_centroid','x*(1+(0.16*x^0.18)*([0]/[1]))/(1+[0]/[1])-[4]*sqrt([2]**2+([3]*(1+(0.16*x^0.18)*([0]/3))/(1+([0]/3)))**2)',0,25)
+ER_centroid_cut.SetNpx(2500)
+ER_centroid_cut.SetParName(0,'Voltage')
+ER_centroid_cut.SetParName(1,'Creation Potential')
+ER_centroid_cut.FixParameter(1,3.0)
+ER_centroid_cut.SetParName(2,'Sigma_Ion')
+ER_centroid_cut.SetParName(3,'Sigma_Rec')
+ER_centroid_cut.SetParName(4,'Gamma Cut')
+ER_centroid_cut.SetTitle('Cut on ER Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
 
 
 def RecoilResolutionFromHeat(FWHM_heat,voltage,Erec):
@@ -269,22 +287,6 @@ def Simple2DEfficiencyID3():
       hist.SetBinContent(recbin,ionbin,eff_total)
       hist.SetBinError(recbin,ionbin,0)
   return hist
-
-
-def GetGammaCutEfficiency(self,voltage):
-  GammaCutEfficiency = TH2F('gamma_cut_efficiency','Gamma Cut Efficiency;E_{Rec} (keV_{nr});E_{Ion} (keV_{nr});Efficiency',200,0,20,100,0,10)
-  hist = GammaCutEfficiency
-  ER_centroid.SetParameter(0,voltage)
-  for xbin in range(1,hist.GetNbinsX()+1):
-    Erec = hist.GetXaxis().GetBinCenter(xbin)
-    ioncut = ER_centroid.Eval(Erec)-offset
-    for ybin in range(1,hist.GetNbinsY()+1):
-      Eion = hist.GetYaxis().GetBinCenter(ybin)
-      if Eion < ioncut:
-	hist.SetBinContent(xbin, ybin, 1.0)
-      else:
-	hist.SetBinContent(xbin, ybin, 0.0)
-  return True
 
 
 def TGraphFromDataSet(dataset):
