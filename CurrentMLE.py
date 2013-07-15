@@ -11,13 +11,19 @@ gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistriRangeExtended.C")
 # define maximal energies
 EnergyIonMax = 14
 EnergyRecMax = 25
-DataFile = 'Data/ID3_eventlist_lowE.txt'
-#DataFile = 'Data/ID3_eventlist_lowE_cut1.txt'
 
 
 #switches and input parameters to control script
 wimp_mass = 10 #set wimp mass or switch signal of entirely (with False)
-MC_sims = int(1e3) #set number of MC simulations: 0 means none at all
+MC_sets = 0#int(1e2) #set number of MC simulations: 0 means none at all
+SavePlots = False #flag decides whether plots are saved
+CutSet = True #use event set with 1 event in NR band cut or not
+
+
+if CutSet:
+  DataFile = 'Data/ID3_eventlist_lowE_cut1.txt'
+else:
+  DataFile = 'Data/ID3_eventlist_lowE.txt'
 
 
 # definition of observables
@@ -186,15 +192,18 @@ FitResult.Print('v')
 
 #calculate and print cross section limit for this wimp mass:
 if wimp_mass:
-  wimp_events = N_signal.getVal()
-  wimp_events_error = N_signal.getAsymErrorHi()
+  signal_parameter = FitResult.floatParsFinal().find('N_signal')
+  wimp_events = signal_parameter.getVal()
+  wimp_events_error = signal_parameter.getAsymErrorHi()
   wimp_events_limit = wimp_events * 1.64 * wimp_events_error
   livetime = 197 #wimp search livetime in days
   mass = 0.160 #detector mass in kg
   rate = signal_hist.Integral('WIDTH')
   signal_events = rate * livetime * mass * 1e6
   sigma_limit = wimp_events_limit / signal_events
-  print 'cross section limit: {0:8.1e} pb'.format(sigma_limit)
+
+  print '{0:10} | {1:8} | {2:8} | {3:10} | {4:10}'.format('wimp_mass','N_signal','ErrorLow','ErrorHigh','XS-limit [pb]')
+  print '{0:10} | {1:8} | {2:8} | {3:10} | {4:10}'.format(wimp_mass,wimp_events,signal_parameter.getAsymErrorLo(),wimp_events_error,sigma_limit)
 
 
 
@@ -219,7 +228,7 @@ final_pdf.plotOn(ionframe, RooFit.Components("Zn65_ion_pdf"), RooFit.LineColor(k
 final_pdf.plotOn(ionframe, RooFit.Components("Ge68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Ga68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("signal_pdf"), RooFit.LineColor(kMagenta), RooFit.LineWidth(3))
-final_pdf.paramOn(ionframe,RooFit.Format('NEU',RooFit.AutoPrecision(2)),RooFit.Layout(0.1,0.65,0.9),RooFit.ShowConstants(kFALSE))
+final_pdf.paramOn(ionframe,RooFit.Format('NEU',RooFit.AutoPrecision(2)),RooFit.Layout(0.1,0.55,0.9),RooFit.ShowConstants(kFALSE))
 red_chi2_ion = ionframe.chiSquare("model", "data", ndf)
 print "reduced chi2 for ion:",red_chi2_ion
 
@@ -278,9 +287,9 @@ recframe.SetTitle('Projection in E_{rec}')
 
 
 # Monte Carlo statistics output
-if MC_sims:
+if MC_sets:
   MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion),RooFit.Extended(kTRUE))
-  MC_study.generateAndFit(MC_sims,events,kFALSE)
+  MC_study.generateAndFit(MC_sets,events,kFALSE)
 
   FitParams = FitResult.floatParsFinal()
   NumFitParams = FitParams.getSize()
@@ -295,13 +304,13 @@ if MC_sims:
 
   nll_line = TLine()
   nll_line.SetLineWidth(2)
-  nll_line.SetLineStyle(1)
+  nll_line.SetLineStyle(7)
   nll_line.SetLineColor(kBlue)
 
   zeroline = TLine()
   zeroline.SetLineWidth(2)
-  zeroline.SetLineStyle(1)
-  zeroline.SetLineColor(kMagenta)
+  zeroline.SetLineStyle(7)
+  zeroline.SetLineColor(kBlack)
 
   for i in range(NumFitParams):
     parameter = FitParams[i]
@@ -310,7 +319,7 @@ if MC_sims:
     paramline = TLine()
     paramline.SetLineWidth(2)
     paramline.SetLineStyle(1)
-    paramline.SetLineColor(kRed)
+    paramline.SetLineColor(kBlue)
     ParamLineList.append(paramline)
 
     pad = c2.cd(i+1)
@@ -381,7 +390,7 @@ if MC_sims:
 
     c3.cd(3)
     parampullframe = (MC_study.plotPull(parameter,RooFit.Range(-10,10),RooFit.FitGauss(kTRUE)))
-    parampullframe.SetTitle('MC pull distri'+paramname)
+    parampullframe.SetTitle('MC pull distri '+paramname)
     parampullframe.Draw()
     gPad.Update()
     zeroline.DrawLine(0,gPad.GetUymin(),0,gPad.GetUymax())
@@ -391,4 +400,12 @@ if MC_sims:
     MCnllframe.Draw()
     MCnllframe.getHist().Fit('gaus')
     gPad.Update()
+    nll_line.SetLineStyle(1)
     nll_line.DrawLine(nllvalue,gPad.GetUymin(),nllvalue,gPad.GetUymax())
+
+if SavePlots:
+  c1.SaveAs('%iGeV_PDFs.png'%wimp_mass)
+  if MC_sets:
+    c2.SaveAs('%iGeV_param-stats.png'%wimp_mass)
+    c3.SaveAs('%iGeV_signal-stats.png'%wimp_mass)
+  
