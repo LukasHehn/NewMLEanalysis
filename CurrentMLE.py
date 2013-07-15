@@ -8,15 +8,21 @@ from DetectorClass import *
 gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistriRangeExtended.C")
 
 
+# define maximal energies
+EnergyIonMax = 14
+EnergyRecMax = 25
+DataFile = 'Data/ID3_eventlist_lowE.txt'
+#DataFile = 'Data/ID3_eventlist_lowE_cut1.txt'
+
+
 #switches and input parameters to control script
 wimp_mass = 10 #set wimp mass or switch signal of entirely (with False)
-MC_sims = int(1e1) #set number of MC simulations: 0 means none at all
-cutset = 1 #use event sets with outlying events cut
+MC_sims = int(1e3) #set number of MC simulations: 0 means none at all
 
 
 # definition of observables
-ion = RooRealVar('ion','E_{ion}',Energy['ion']['min'],Energy['ion']['max'],'keV_{ee}')
-rec = RooRealVar('rec','E_{rec}',Energy['rec']['min'],Energy['rec']['max'],'keV_{nr}')
+ion = RooRealVar('ion','E_{ion}',0,EnergyIonMax,'keV_{ee}')
+rec = RooRealVar('rec','E_{rec}',0,EnergyRecMax,'keV_{nr}')
 time = RooRealVar('time','time',0.0,1.2,'years')
 
 
@@ -39,10 +45,7 @@ sigma_ion = RooRealVar('sigma_ion','ionization energy resolution',FWHM_ion/2.35)
 
 
 # dataset
-if cutset == 3: realdata = RooDataSet.read('ID3-eventlist_30keV_cut3.txt',RooArgList(time,rec,ion)) #without 3 outlying events
-elif cutset == 2: realdata = RooDataSet.read('ID3-eventlist_30keV_cut2.txt',RooArgList(time,rec,ion)) #without 2 NR events
-elif cutset == 1: realdata = RooDataSet.read('ID3-eventlist_30keV_cut1.txt',RooArgList(time,rec,ion)) #without 1 event in the NR band Eric doesn't have
-else: realdata = RooDataSet.read('ID3-eventlist_30keV.txt',RooArgList(time,rec,ion))
+realdata = RooDataSet.read(DataFile,RooArgList(time,rec,ion))
 realdata_scatter = realdata.createHistogram(rec,ion,Energy['rec']['bins'],Energy['ion']['bins'])
 realdata_graph = TGraphFromDataSet(realdata)
 events = int(realdata.numEntries())
@@ -139,13 +142,11 @@ N_Ge68 = RooRealVar('N_Ge68','evts of 68Ge peak (10.37keV)',317.,200.,400.)
 if wimp_mass:
   TriggerEfficiency.SetParameter(0, 3.874)
   TriggerEfficiency.SetParameter(1, FWHM_rec)
-  TriggerEfficiency.SetNpx(250)
   trigger_efficiency = TriggerEfficiency.GetHistogram()
 
   FiducialEfficiency.SetParameter(0, -1.876)
   FiducialEfficiency.SetParameter(1, 1.247)
   FiducialEfficiency.SetParameter(2, 0.947)
-  FiducialEfficiency.SetNpx(1000)
 
   # read in WIMP spectrum
   signal_hist = WimpDistri(str(wimp_mass), 'ID3', FWHM_rec, FWHM_ion, trigger_efficiency, 0, 0, 0, 6.4, 1)
@@ -175,8 +176,8 @@ nll = RooNLLVar('nll','nll',final_pdf,realdata,RooFit.NumCPU(2),RooFit.PrintEval
 minuit = RooMinuit(nll)
 #FitResult = minuit.fit('hvr')
 minuit.migrad() #find minimum
-minuit.hesse() #symetric errors
-minuit.minos() #asymetric errors
+minuit.hesse() #symmetric errors
+minuit.minos() #asymmetric errors
 FitResult = minuit.save('realfit','fit to real data')
 ndf = FitResult.floatParsFinal().getSize()
 
