@@ -7,11 +7,11 @@ import Functions
 # define parameters used for skimming event set
 DetectorName = 'ID3'
 KDataFile = 'Data/Run12_ID3_bckg_with_subrecords.root'
-OutFileName = False#'Data/ID3_Recalibration_Test.txt'
+OutFileName = False#'Data/ID3_eventlist_lowE.txt'
 EnergyIonMax = 14
 EnergyRecMax = 25
-IonFactor = 1.0
-HeatFactor = 1.0
+IonFactor = False#1.03
+HeatFactor = False#1.03
 Voltage = 6.4
 E_Thresh = 3.874
 FWHM_heat = 0.82
@@ -33,7 +33,7 @@ infile = KDataReader(KDataFile)
 # get first event and total number of events
 event = infile.GetEvent()
 entries = infile.GetEntries()
-print entries,"total number of events in file",KDataFile
+print entries,"total number of events in file",KDataFile,"\n"
 
 #stamp = event.GetStamp()
 for entry in range(entries):
@@ -48,8 +48,12 @@ for entry in range(entries):
     #bolo records
     bolo = event.GetBolo(bolonum)
 
-    EnergyIon = IonFactor*bolo.GetEnergyIonFiducial()
-    EnergyHeat = HeatFactor*bolo.GetEnergyHeat(1)
+    if IonFactor and HeatFactor:
+      EnergyIon = IonFactor*bolo.GetEnergyIonFiducial()
+      EnergyHeat = HeatFactor*bolo.GetEnergyHeat(1)      
+    else:
+      EnergyIon = bolo.GetEnergyIonFiducial()
+      EnergyHeat = bolo.GetEnergyHeat(1)      
 
     #samba records
     samba = bolo.GetSambaRecord()
@@ -69,13 +73,17 @@ for entry in range(entries):
        and CUTS['Guard2']['Min']<bolo.GetBaselineNoiseGuard(2)<CUTS['Guard2']['Max']\
        and bolo.GetEventFlag()==2\
        and bolo.GetVoltageFlag>=0\
-       and bolo.GetIonPulseTimeOffset()<600: #       and bolo.TestCutsBit(6)==True\
+       and bolo.GetIonPulseTimeOffset()<600:
         EnergyRec = Functions.GetEnergyRecoilFromEstimator(EnergyHeat, Voltage)
         if 0 < EnergyIon < EnergyIonMax and 0 < EnergyRec < EnergyRecMax:
-          print 'Entry: {0:6};Event: {1:6}; time: {2:8}; E_heat: {3:4.1f}; E_rec: {4:4.1f}; E_ion: {5:4.1f}'.format(entry,EventNumber, UnixTime, EnergyHeat, EnergyRec, EnergyIon)
-          if EnergyIon < 2:
+          if eventcounter%20 == 0:
+            print "-------------------------------------------------------------------------------------------------------------"
+            print '{0:10} | {1:10} | {2:12} | {3:10} | {4:10} | {5:10}'.format('FileEntry','EventNumber', 'UnixTime', 'EnergyHeat', 'EnergyRec', 'EnergyIon')
+            print "-------------------------------------------------------------------------------------------------------------"
+          print '{0:10} | {1:10} | {2:12} | {3:10.2f} | {4:10.2f} | {5:10.2f}'.format(entry,EventNumber, UnixTime, EnergyHeat, EnergyRec, EnergyIon)
+          if EnergyIon < 2.:
             print "low E_ion"
-          if bolo.TestCutsBit(6) == True:
+          if bolo.GetChi2Flag() == 1:
             TimeList.append(UnixTime)
             IonList.append(EnergyIon)
             RecList.append(EnergyRec)
@@ -160,10 +168,18 @@ EventGraphCuts.Draw('SAMEP')
 
 # add lines for Electron Recoil and Nuclear Recoil centroids
 Functions.ER_centroid.SetParameter(0,Voltage)
-Functions.ER_centroid.Draw('SAME')
 Functions.ER_centroid.SetLineColor(kBlue)
 Functions.ER_centroid.SetLineWidth(3)
-Functions.NR_centroid.Draw('SAME')
-Functions.NR_centroid.SetLineColor(kBlue)
+Functions.ER_centroid.Draw('SAME')
+Functions.ER_centroid_cut.SetParameter(0,Voltage)
+Functions.ER_centroid_cut.SetParameter(2,FWHM_ion/2.35)
+Functions.ER_centroid_cut.SetParameter(3,FWHM_rec/2.35)
+Functions.ER_centroid_cut.SetParameter(4,GammaCut)
+Functions.ER_centroid_cut.SetLineColor(kBlue)
+Functions.ER_centroid_cut.SetLineWidth(3)
+Functions.ER_centroid_cut.SetLineStyle(7)
+Functions.ER_centroid_cut.Draw('SAME')
+Functions.NR_centroid.SetLineColor(kMagenta)
 Functions.NR_centroid.SetLineWidth(3)
 Functions.NR_centroid.SetLineStyle(7)
+Functions.NR_centroid.Draw('SAME')
