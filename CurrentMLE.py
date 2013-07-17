@@ -14,8 +14,8 @@ EnergyRecMax = 25
 
 
 #switches and input parameters to control script
-wimp_mass = 10 #set wimp mass or switch signal of entirely (with False)
-MC_sets = 0#int(1e2) #set number of MC simulations: 0 means none at all
+wimp_mass = 8 #set wimp mass or switch signal of entirely (with False)
+MC_sets = int(1e1) #set number of MC simulations: 0 means none at all
 SavePlots = False #flag decides whether plots are saved
 CutSet = True #use event set with 1 event in NR band cut or not
 
@@ -178,9 +178,8 @@ else:
 
 
 # manual mode
-nll = RooNLLVar('nll','nll',final_pdf,realdata,RooFit.NumCPU(2),RooFit.PrintEvalErrors(2),RooFit.Extended(kTRUE))
+nll = RooNLLVar('nll','nll',final_pdf,realdata,RooFit.NumCPU(2),RooFit.PrintEvalErrors(2),RooFit.Extended(kTRUE),RooFit.Verbose(kFALSE))
 minuit = RooMinuit(nll)
-#FitResult = minuit.fit('hvr')
 minuit.migrad() #find minimum
 minuit.hesse() #symmetric errors
 minuit.minos() #asymmetric errors
@@ -203,6 +202,7 @@ if wimp_mass:
   sigma_limit = wimp_events_limit / signal_events
 
   print '{0:10} | {1:8} | {2:8} | {3:10} | {4:10}'.format('wimp_mass','N_signal','ErrorLow','ErrorHigh','XS-limit [pb]')
+  print "------------------------------------------------------------"
   print '{0:10} | {1:8} | {2:8} | {3:10} | {4:10}'.format(wimp_mass,wimp_events,signal_parameter.getAsymErrorLo(),wimp_events_error,sigma_limit)
 
 
@@ -223,14 +223,14 @@ final_pdf.plotOn(ionframe, RooFit.Components("V49_ion_pdf"), RooFit.LineColor(kR
 final_pdf.plotOn(ionframe, RooFit.Components("Cr51_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Mn54_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Fe55_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-final_pdf.plotOn(ionframe, RooFit.Components("Co57_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+#final_pdf.plotOn(ionframe, RooFit.Components("Co57_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Zn65_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Ge68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Ga68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("signal_pdf"), RooFit.LineColor(kMagenta), RooFit.LineWidth(3))
 final_pdf.paramOn(ionframe,RooFit.Format('NEU',RooFit.AutoPrecision(2)),RooFit.Layout(0.1,0.55,0.9),RooFit.ShowConstants(kFALSE))
 red_chi2_ion = ionframe.chiSquare("model", "data", ndf)
-print "reduced chi2 for ion:",red_chi2_ion
+#print "reduced chi2 for ion:",red_chi2_ion
 
 
 recframe = rec.frame()
@@ -240,14 +240,14 @@ final_pdf.plotOn(recframe, RooFit.Components("V49_rec_pdf"), RooFit.LineColor(kR
 final_pdf.plotOn(recframe, RooFit.Components("Cr51_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Mn54_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Fe55_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-final_pdf.plotOn(recframe, RooFit.Components("Co57_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+#final_pdf.plotOn(recframe, RooFit.Components("Co57_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Zn65_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Ge68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Ga68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("signal_pdf"), RooFit.LineColor(kMagenta), RooFit.LineWidth(3))
 #final_pdf.paramOn(recframe,RooFit.Format('NEU',RooFit.AutoPrecision(2)),RooFit.Layout(0.1,0.5,0.9),RooFit.ShowConstants(kFALSE))
 red_chi2_rec = recframe.chiSquare("model", "data", ndf)
-print "reduced chi2 for rec:",red_chi2_rec
+#print "reduced chi2 for rec:",red_chi2_rec
 
 
 # Plotting of fit results (PDFs and projected spectra)
@@ -288,7 +288,7 @@ recframe.SetTitle('Projection in E_{rec}')
 
 # Monte Carlo statistics output
 if MC_sets:
-  MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion),RooFit.Extended(kTRUE))
+  MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion),RooFit.Verbose(kFALSE),RooFit.FitOptions(RooFit.PrintLevel(-1),RooFit.NumCPU(2)),RooFit.Extended(kTRUE))
   MC_study.generateAndFit(MC_sets,events,kFALSE)
 
   FitParams = FitResult.floatParsFinal()
@@ -345,7 +345,7 @@ if MC_sets:
     ParamDistriFrameList.append(paramdistriframe)
     pad.cd(2)
     paramdistriframe.Draw()
-    paramdistriframe.getHist().Fit('gaus')
+    paramdistriframe.getHist().Fit('gaus','QEM')
     gPad.Update()
     paramline.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
 
@@ -384,7 +384,7 @@ if MC_sets:
     paramdistriframe = MC_study.plotParam(parameter)
     paramdistriframe.SetTitle('MC distri '+paramname)
     paramdistriframe.Draw()
-    paramdistriframe.getHist().Fit('gaus')
+    paramdistriframe.getHist().Fit('gaus','QEM')
     gPad.Update()
     paramline.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
 
@@ -398,7 +398,7 @@ if MC_sets:
     c3.cd(4)
     MCnllframe = MC_study.plotNLL()
     MCnllframe.Draw()
-    MCnllframe.getHist().Fit('gaus')
+    MCnllframe.getHist().Fit('gaus','QEM')
     gPad.Update()
     nll_line.SetLineStyle(1)
     nll_line.DrawLine(nllvalue,gPad.GetUymin(),nllvalue,gPad.GetUymax())
