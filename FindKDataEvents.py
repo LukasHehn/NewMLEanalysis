@@ -7,11 +7,11 @@ import Functions
 # define parameters used for skimming event set
 DetectorName = 'ID3'
 KDataFile = 'Data/Run12_ID3_bckg_with_subrecords.root'
-OutFileName = False#'Data/ID3_eventlist_lowE.txt'
+OutFileName = 'Data/ID3_eventlist_lowE_corrected.txt'
 EnergyIonMax = 14
 EnergyRecMax = 25
-IonFactor = False#1.03
-HeatFactor = False#1.03
+IonFactor = 1.0/1.029
+HeatFactor = 1.0/1.017
 Voltage = 6.4
 E_Thresh = 3.874
 FWHM_heat = 0.82
@@ -76,24 +76,25 @@ for entry in range(entries):
        and bolo.GetIonPulseTimeOffset()<600:
         EnergyRec = Functions.GetEnergyRecoilFromEstimator(EnergyHeat, Voltage)
         if 0 < EnergyIon < EnergyIonMax and 0 < EnergyRec < EnergyRecMax:
+          Comment = ' '
           if eventcounter%20 == 0:
             print "-------------------------------------------------------------------------------------------------------------"
-            print '{0:10} | {1:10} | {2:12} | {3:10} | {4:10} | {5:10}'.format('FileEntry','EventNumber', 'UnixTime', 'EnergyHeat', 'EnergyRec', 'EnergyIon')
+            print '{0:10} | {1:12} | {2:12} | {3:10} | {4:10} | {5:10} | {6:10}'.format('FileEntry','EventNumber', 'UnixTime', 'EnergyHeat', 'EnergyRec', 'EnergyIon', 'Comment')
             print "-------------------------------------------------------------------------------------------------------------"
-          print '{0:10} | {1:10} | {2:12} | {3:10.2f} | {4:10.2f} | {5:10.2f}'.format(entry,EventNumber, UnixTime, EnergyHeat, EnergyRec, EnergyIon)
           if EnergyIon < 2.:
-            print "low E_ion"
+            Comment = "Ion < 2keV"
           if bolo.GetChi2Flag() == 1:
             TimeList.append(UnixTime)
             IonList.append(EnergyIon)
             RecList.append(EnergyRec)
             eventcounter += 1
           else:
-            print "Add. cut failed"
+            Comment = "failed additional cut"
             TimeListCuts.append(UnixTime)
             IonListCuts.append(EnergyIon)
             RecListCuts.append(EnergyRec)
             cutcounter += 1
+          print '{0:10} | {1:12} | {2:12} | {3:10.2f} | {4:10.2f} | {5:10.2f} | {6:10}'.format(entry,EventNumber, UnixTime, EnergyHeat, EnergyRec, EnergyIon, Comment)
 infile.Close()
 
 print "%i events passed all standard cuts" % eventcounter
@@ -137,7 +138,7 @@ EventGraphCuts.SetMarkerColor(kMagenta)
 
 # wimp signal
 if wimp_mass:
-  gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistriAdapted.C")
+  gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistriRangeExtended.C")
   
   FWHM_rec = Functions.RecoilResolutionFromHeat(FWHM_heat,Voltage,10)
     
