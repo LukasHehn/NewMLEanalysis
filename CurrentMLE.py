@@ -15,15 +15,21 @@ EnergyRecMax = 25
 
 #switches and input parameters to control script
 wimp_mass = 8 #set wimp mass or switch signal of entirely (with False)
-MC_sets = int(1e1) #set number of MC simulations: 0 means none at all
+MC_sets = int(1e3) #set number of MC simulations: 0 means none at all
 SavePlots = False #flag decides whether plots are saved
 CutSet = True #use event set with 1 event in NR band cut or not
+CorrectedSet = True #use event set with energies corrected by average best fit values
 
-
-if CutSet:
-  DataFile = 'Data/ID3_eventlist_lowE_cut1.txt'
+if CorrectedSet:
+  if CutSet:
+    DataFile = 'Data/ID3_eventlist_lowE_corrected_cut1.txt'
+  else:
+    DataFile = 'Data/ID3_eventlist_lowE_corrected.txt'
 else:
-  DataFile = 'Data/ID3_eventlist_lowE.txt'
+  if CutSet:
+    DataFile = 'Data/ID3_eventlist_lowE_cut1.txt'
+  else:
+    DataFile = 'Data/ID3_eventlist_lowE.txt'
 
 
 # definition of observables
@@ -193,17 +199,18 @@ FitResult.Print('v')
 if wimp_mass:
   signal_parameter = FitResult.floatParsFinal().find('N_signal')
   wimp_events = signal_parameter.getVal()
-  wimp_events_error = signal_parameter.getAsymErrorHi()
-  wimp_events_limit = wimp_events * 1.64 * wimp_events_error
-  livetime = 197 #wimp search livetime in days
+  error_low = signal_parameter.getAsymErrorLo()
+  error_high = signal_parameter.getAsymErrorHi()
+  wimp_events_limit = wimp_events + 1.28 * error_high
+  livetime = 197. #wimp search livetime in days
   mass = 0.160 #detector mass in kg
   rate = signal_hist.Integral('WIDTH')
   signal_events = rate * livetime * mass * 1e6
   sigma_limit = wimp_events_limit / signal_events
 
-  print '{0:10} | {1:8} | {2:8} | {3:10} | {4:10}'.format('wimp_mass','N_signal','ErrorLow','ErrorHigh','XS-limit [pb]')
-  print "------------------------------------------------------------"
-  print '{0:10} | {1:8} | {2:8} | {3:10} | {4:10}'.format(wimp_mass,wimp_events,signal_parameter.getAsymErrorLo(),wimp_events_error,sigma_limit)
+  print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10}'.format('wimp_mass','Rate','N_signal','ErrorLow','ErrorHigh','XS-limit [pb]')
+  print "-----------------------------------------------------------------------------------"
+  print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10}'.format(wimp_mass,rate,wimp_events,error_low,error_high,sigma_limit)
 
 
 
@@ -217,7 +224,9 @@ ionbins = int((ion.getMax()-ion.getMin())*10)
 
 
 ionframe = ion.frame()
+ionframe.SetTitle('Projection in E_{ion}')
 realdata.plotOn(ionframe, RooFit.Name('data'), RooFit.Binning(ionbins), RooFit.MarkerSize(1.0))
+final_pdf.plotOn(ionframe, RooFit.Components("flat_gamma_bckgd_pdf"), RooFit.LineColor(kGreen), RooFit.LineWidth(2))
 final_pdf.plotOn(ionframe, RooFit.Name('model'), RooFit.LineColor(kBlue), RooFit.LineWidth(2))
 final_pdf.plotOn(ionframe, RooFit.Components("V49_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Cr51_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
@@ -234,7 +243,9 @@ red_chi2_ion = ionframe.chiSquare("model", "data", ndf)
 
 
 recframe = rec.frame()
+recframe.SetTitle('Projection in E_{rec}')
 realdata.plotOn(recframe, RooFit.Name("data"), RooFit.Binning(recbins), RooFit.MarkerColor(kBlack), RooFit.MarkerSize(1.0))
+final_pdf.plotOn(recframe, RooFit.Components("flat_gamma_bckgd_pdf"), RooFit.LineColor(kGreen), RooFit.LineWidth(2))
 final_pdf.plotOn(recframe, RooFit.Name('model'), RooFit.LineColor(kBlue), RooFit.LineWidth(2))
 final_pdf.plotOn(recframe, RooFit.Components("V49_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Cr51_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
@@ -245,7 +256,6 @@ final_pdf.plotOn(recframe, RooFit.Components("Zn65_rec_pdf"), RooFit.LineColor(k
 final_pdf.plotOn(recframe, RooFit.Components("Ge68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Ga68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("signal_pdf"), RooFit.LineColor(kMagenta), RooFit.LineWidth(3))
-#final_pdf.paramOn(recframe,RooFit.Format('NEU',RooFit.AutoPrecision(2)),RooFit.Layout(0.1,0.5,0.9),RooFit.ShowConstants(kFALSE))
 red_chi2_rec = recframe.chiSquare("model", "data", ndf)
 #print "reduced chi2 for rec:",red_chi2_rec
 
@@ -256,7 +266,7 @@ c1.Divide(2,2)
 # final pdf and data
 c1.cd(1)
 c1.cd(1).SetLogz()
-final_hist.Draw('COLZ')
+final_hist.Draw('COL')
 final_hist.SetStats(0)
 final_hist.SetTitle('ID3 WIMP search data + best fit PDF')
 realdata_graph.SetMarkerColor(kMagenta)
@@ -273,17 +283,16 @@ if wimp_mass:
   c1.cd(3)
   signal_hist.Draw('CONT0')
   signal_hist.SetStats(0)
+  signal_hist.SetContour(30)
   realdata_graph.Draw('SAMESP')
   ER_centroid.DrawCopy('SAME')
   NR_centroid.DrawCopy('SAME')
 # data and fit in ionization energy
 c1.cd(2)
 ionframe.Draw()
-ionframe.SetTitle('Projection in E_{ion}')
 # data and fit in recoil energy
 c1.cd(4)
 recframe.Draw()
-recframe.SetTitle('Projection in E_{rec}')
 
 
 # Monte Carlo statistics output
@@ -327,7 +336,7 @@ if MC_sets:
 
     if paramname == 'N_signal':
       pad.SetFillColor(kYellow-9)
-      pad.SetFillStyle(4000)
+      pad.SetFillStyle(4100)
 
     paramnllframe = parameter.frame()
     paramnllframe.SetTitle('NLL fit '+paramname)
@@ -335,7 +344,7 @@ if MC_sets:
     ParamNLLFrameList.append(paramnllframe)
     pad.cd(1)
     paramnllframe.Draw()
-    paramnllframe.GetYaxis().SetRangeUser(nll.getVal()-10,nll.getVal()+100)
+    paramnllframe.GetYaxis().SetRangeUser(nll.getVal()-10,nll.getVal()+20)
     gPad.Update()
     nll_line.DrawLine(gPad.GetUxmin(),nll.getVal(),gPad.GetUxmax(),nll.getVal())
     paramline.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
@@ -373,7 +382,7 @@ if MC_sets:
     paramnllframe = parameter.frame()
     paramnllframe.SetTitle('NLL fit '+paramname)
     nll.plotOn(paramnllframe, RooFit.Precision(1e-5))
-    paramnllframe.SetMaximum(nllvalue+100)
+    paramnllframe.SetMaximum(nllvalue+20)
     paramnllframe.SetMinimum(nllvalue-1)
     paramnllframe.Draw()
     gPad.Update()
@@ -389,7 +398,7 @@ if MC_sets:
     paramline.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
 
     c3.cd(3)
-    parampullframe = (MC_study.plotPull(parameter,RooFit.Range(-10,10),RooFit.FitGauss(kTRUE)))
+    parampullframe = (MC_study.plotPull(parameter,RooFit.FitGauss(kTRUE)))#,RooFit.Range(-10,10)
     parampullframe.SetTitle('MC pull distri '+paramname)
     parampullframe.Draw()
     gPad.Update()
