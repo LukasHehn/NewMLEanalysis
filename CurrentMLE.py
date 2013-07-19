@@ -4,52 +4,28 @@ from Functions import *
 from DetectorClass import *
 
 
-# load Eric's WIMP signal file
-gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistriAdapted.C")
-
-
 # define maximal energies
-EnergyIonMax = 10#14
-EnergyRecMax = 20#25
+EnergyIonMax = 10.
+EnergyRecMax = 20.
 
 
 #switches and input parameters to control script
 wimp_mass = 10 #set wimp mass or switch signal of entirely (with False)
-MC_sets = int(1e100) #set number of MC simulations: 0 means none at all
+MC_sets = int(1e1) #set number of MC simulations: 0 means none at all
 SavePlots = False #flag decides whether plots are saved
-DataSource = 'Eric' #'KData'
-CutSet = True #use event set with 1 event in NR band cut or not
-CorrectedSet = True #use event set with energies corrected by average best fit values
 
-if DataSource == 'KData':
-  if CorrectedSet:
-    if CutSet:
-      DataFile = 'Data/ID3_eventlist_lowE_corrected_cut1.txt'
-    else:
-      DataFile = 'Data/ID3_eventlist_lowE_corrected.txt'
-  else:
-    if CutSet:
-      DataFile = 'Data/ID3_eventlist_lowE_cut1.txt'
-    else:
-      DataFile = 'Data/ID3_eventlist_lowE.txt'
-elif DataSource == 'Eric':
-  DataFile = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
+DataFile = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
 
 
 # definition of observables
-ion = RooRealVar('ion','E_{ion}',0,EnergyIonMax,'keV_{ee}')
-rec = RooRealVar('rec','E_{rec}',0,EnergyRecMax,'keV_{nr}')
-time = RooRealVar('time','time',0.0,1.2,'years')
+ion = RooRealVar('ion','E_{ion}',0.,EnergyIonMax,'keV_{ee}')
+rec = RooRealVar('rec','E_{rec}',0.,EnergyRecMax,'keV_{nr}')
 
-
-# detector efficiency
-total_efficiency = Simple2DEfficiencyID3()
-total_efficiency_datahist = RooDataHist('total_efficiency_datahist','total_efficiency_datahist',RooArgList(rec,ion),total_efficiency)
-total_efficiency_pdf = RooHistPdf('total_efficiency_pdf','total_efficiency_pdf',RooArgSet(rec,ion),total_efficiency_datahist)
 
 # detector specific parameters
 voltage = RooRealVar('voltage','applied voltage',6.4)
 
+E_thresh = 3.874
 FWHM_heat = 0.82 #Eric@10keV
 FWHM_rec = RecoilResolutionFromHeat(FWHM_heat,voltage.getVal(),10)
 sigma_rec = RooRealVar('sigma_rec','recoil energy resolution',FWHM_rec/2.35)
@@ -58,12 +34,14 @@ FWHM_ion = 0.72 #Eric
 sigma_ion = RooRealVar('sigma_ion','ionization energy resolution',FWHM_ion/2.35)
 
 
+# detector efficiency
+total_efficiency = Simple2DEfficiencyID3(E_thresh,FWHM_rec/2.35)
+total_efficiency_datahist = RooDataHist('total_efficiency_datahist','total_efficiency_datahist',RooArgList(rec,ion),total_efficiency)
+total_efficiency_pdf = RooHistPdf('total_efficiency_pdf','total_efficiency_pdf',RooArgSet(rec,ion),total_efficiency_datahist)
+
+
 # dataset
-if DataSource == 'Eric':
-  realdata = RooDataSet.read(DataFile,RooArgList(rec,ion))
-elif DataSource == 'KData':
-  realdata = RooDataSet.read(DataFile,RooArgList(time,rec,ion))
-else: print "Wrong data source"
+realdata = RooDataSet.read(DataFile,RooArgList(rec,ion))
 realdata_scatter = realdata.createHistogram(rec,ion,Energy['rec']['bins'],Energy['ion']['bins'])
 realdata_graph = TGraphFromDataSet(realdata)
 events = int(realdata.numEntries())
@@ -73,9 +51,8 @@ events = int(realdata.numEntries())
 # definition of gamma peaks
 ion_scaling = RooRealVar('ion_scaling','scaling factor ionization energy',1.0,0.95,1.05)
 rec_scaling = RooRealVar('rec_scaling','scaling factor recoil energy',1.0,0.95,1.05)
-if DataSource == 'Eric':
-  ion_scaling.setConstant(kTRUE)
-  rec_scaling.setConstant(kTRUE)
+ion_scaling.setConstant(kTRUE)
+rec_scaling.setConstant(kTRUE)
 ER_centroid.SetParameter(0,6.4) #ER_centroid used for calculation of peak position in Erec
 
 V49_ion_energy = RooRealVar('V49_ion_energy','V49 peak ion energy',4.97)
@@ -161,17 +138,10 @@ N_Ge68 = RooRealVar('N_Ge68','evts of 68Ge peak (10.37keV)',317.,200.,400.)
 
 # wimp signal
 if wimp_mass:
-  TriggerEfficiency.SetParameter(0, 3.874)
-  TriggerEfficiency.SetParameter(1, FWHM_rec)
-  trigger_efficiency = TriggerEfficiency.GetHistogram()
-
-  FiducialEfficiency.SetParameter(0, -1.876)
-  FiducialEfficiency.SetParameter(1, 1.247)
-  FiducialEfficiency.SetParameter(2, 0.947)
 
   # read in WIMP spectrum
-  signal_hist = WimpDistri(str(wimp_mass), 'ID3', FWHM_rec, FWHM_ion, trigger_efficiency, 0, 0, 0, 6.4, 1)
-  signal_hist.SetTitle('WIMP signal %sGeV'%wimp_mass)
+  signal_hist = WimpSignal2DEric(wimp_mass,sigma_ion.getVal(),sigma_rec.getVal())
+  signal_hist.Multiply(total_efficiency)
   signal_datahist = RooDataHist('signal_datahist','signal_datahist',RooArgList(rec,ion),signal_hist)
   signal_pdf = RooHistPdf('signal_pdf','signal_pdf',RooArgSet(rec,ion),signal_datahist)
   N_signal = RooRealVar('N_signal','WIMP signal events',0.,0.,10.)

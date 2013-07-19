@@ -266,11 +266,11 @@ def FlatGammaBckgd2DEric(sigma_ion,sigma_rec):
   return hist
 
 
-def Simple2DEfficiencyID3(E_thresh, FWHM_rec):
+def Simple2DEfficiencyID3(E_thresh, sigma_rec):
   hist = TH2F('efficiency','efficiency;E_{rec} (keVnr);E_{ion} (keVee);Efficiency',Energy['rec']['bins'],Energy['rec']['min'],Energy['rec']['max'],Energy['ion']['bins'],Energy['ion']['min'],Energy['ion']['max'])
 
   TriggerEfficiency.FixParameter(0, E_thresh)
-  TriggerEfficiency.FixParameter(1, FWHM_rec)
+  TriggerEfficiency.FixParameter(1, sigma_rec)
   FiducialEfficiency.FixParameter(0, -1.876)
   FiducialEfficiency.FixParameter(1, 1.247)
   FiducialEfficiency.FixParameter(2, 0.947)
