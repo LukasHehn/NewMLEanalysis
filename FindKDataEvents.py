@@ -7,7 +7,7 @@ import Functions
 # define parameters used for skimming event set
 DetectorName = 'ID3'
 KDataFile = 'Data/Run12_ID3_bckg_with_subrecords.root'
-OutFileName = 'Data/ID3_eventlist_lowE_corrected.txt'
+OutFileName = False#'Data/ID3_eventlist_lowE_corrected.txt'
 EnergyIonMax = 14
 EnergyRecMax = 25
 IonFactor = 1.0/1.029
@@ -16,6 +16,7 @@ Voltage = 6.4
 E_Thresh = 3.874
 FWHM_heat = 0.82
 FWHM_ion = 0.72
+FWHM_rec = Functions.RecoilResolutionFromHeat(FWHM_heat,Voltage,10)
 
 # Additional WIMP signal parameters
 GammaCut = 1.96
@@ -139,12 +140,10 @@ EventGraphCuts.SetMarkerColor(kMagenta)
 # wimp signal
 if wimp_mass:
   gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistriRangeExtended.C")
-  
-  FWHM_rec = Functions.RecoilResolutionFromHeat(FWHM_heat,Voltage,10)
-    
-  TriggerEfficiency.SetParameter(0, E_Thresh)
-  TriggerEfficiency.SetParameter(1, 1.6)
-  TriggerEfficiency.SetNpx(2500)
+
+  Functions.TriggerEfficiency.SetParameter(0, E_Thresh)
+  Functions.TriggerEfficiency.SetParameter(1, FWHM_rec)
+  Functions.TriggerEfficiency.SetNpx(2500)
 
   # read in WIMP spectrum
   Signal = WimpDistri(str(wimp_mass), DetectorName, FWHM_rec, FWHM_ion, TriggerEfficiency.GetHistogram(), 0, 0, GammaCut, Voltage, 1)
