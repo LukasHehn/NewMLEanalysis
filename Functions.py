@@ -224,9 +224,11 @@ def ReadInWimpSpectrumEric(mass_of_wimp):
   return Hist
 
 
-def WimpSignal2DEric(mass_of_wimp,sigma_ion,sigma_rec,spectrum):
-  denom_i=1./(2*pow(sigma_ion,2))
-  denom_r=1./(2*pow(sigma_rec,2))
+def WimpSignal2DEric(mass_of_wimp,sigma_ion,sigma_rec):
+  spectrum = ReadInWimpSpectrumEric(mass_of_wimp)
+
+  denom_i=1./(2*sigma_ion**2)
+  denom_r=1./(2*sigma_rec**2)
   hist = TH2F('wimp_signal_%sGeV'%mass_of_wimp,'WIMP signal %sGeV;E_{rec} (keVnr);E_{ion} (keVee);Rate (cts/kg*day)'%mass_of_wimp,Energy['rec']['bins'],Energy['rec']['min'],Energy['rec']['max'],Energy['ion']['bins'],Energy['ion']['min'],Energy['ion']['max'])
   for recbin in range(1,hist.GetNbinsX()+1):
     Erec = hist.GetXaxis().GetBinCenter(recbin)
@@ -238,7 +240,7 @@ def WimpSignal2DEric(mass_of_wimp,sigma_ion,sigma_rec,spectrum):
 	Q = LindhardQuenching.Eval(ErecSpec)
 	wimprate = spectrum.GetBinContent(specbin)
 	tutu = denom_r*pow((Erec-ErecSpec),2)
-	kernel = TMath.exp(-tutu-denom_i*pow((Eion-Q*ErecSpec),2))
+	kernel = TMath.exp(-tutu-denom_i*(Eion-Q*ErecSpec)**2)
 	summe += (kernel*wimprate)
       hist.SetBinContent(recbin,ionbin,0.02002*summe/(2*3.141592*sigma_rec*sigma_ion))
   return hist
@@ -264,14 +266,14 @@ def FlatGammaBckgd2DEric(sigma_ion,sigma_rec):
   return hist
 
 
-def Simple2DEfficiencyID3():
+def Simple2DEfficiencyID3(E_thresh, FWHM_rec):
   hist = TH2F('efficiency','efficiency;E_{rec} (keVnr);E_{ion} (keVee);Efficiency',Energy['rec']['bins'],Energy['rec']['min'],Energy['rec']['max'],Energy['ion']['bins'],Energy['ion']['min'],Energy['ion']['max'])
 
-  TriggerEfficiency.SetParameter(0, 3.874)
-  TriggerEfficiency.SetParameter(1, 0.82)
-  FiducialEfficiency.SetParameter(0, -1.876)
-  FiducialEfficiency.SetParameter(1, 1.247)
-  FiducialEfficiency.SetParameter(2, 0.947)
+  TriggerEfficiency.FixParameter(0, E_thresh)
+  TriggerEfficiency.FixParameter(1, FWHM_rec)
+  FiducialEfficiency.FixParameter(0, -1.876)
+  FiducialEfficiency.FixParameter(1, 1.247)
+  FiducialEfficiency.FixParameter(2, 0.947)
 
   for recbin in range(1,hist.GetNbinsX()+1):
     Erec = hist.GetXaxis().GetBinCenter(recbin)
@@ -280,12 +282,12 @@ def Simple2DEfficiencyID3():
       Eion = hist.GetYaxis().GetBinCenter(ionbin)
       eff_fiducial = FiducialEfficiency.Eval(Eion)
 
-      if eff_trigger >= 0 and eff_fiducial >= 0:
+      if eff_trigger >= 0. and eff_fiducial >= 0.:
 	eff_total = eff_trigger * eff_fiducial
       else:
-	eff_total = 0
+	eff_total = 0.
       hist.SetBinContent(recbin,ionbin,eff_total)
-      hist.SetBinError(recbin,ionbin,0)
+      hist.SetBinError(recbin,ionbin,0.)
   return hist
 
 
