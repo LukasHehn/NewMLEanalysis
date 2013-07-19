@@ -5,31 +5,35 @@ from DetectorClass import *
 
 
 # load Eric's WIMP signal file
-gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistriRangeExtended.C")
+gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistriAdapted.C")
 
 
 # define maximal energies
-EnergyIonMax = 14
-EnergyRecMax = 25
+EnergyIonMax = 10#14
+EnergyRecMax = 20#25
 
 
 #switches and input parameters to control script
-wimp_mass = 8 #set wimp mass or switch signal of entirely (with False)
-MC_sets = int(1e3) #set number of MC simulations: 0 means none at all
+wimp_mass = 10 #set wimp mass or switch signal of entirely (with False)
+MC_sets = int(1e100) #set number of MC simulations: 0 means none at all
 SavePlots = False #flag decides whether plots are saved
+DataSource = 'Eric' #'KData'
 CutSet = True #use event set with 1 event in NR band cut or not
 CorrectedSet = True #use event set with energies corrected by average best fit values
 
-if CorrectedSet:
-  if CutSet:
-    DataFile = 'Data/ID3_eventlist_lowE_corrected_cut1.txt'
+if DataSource == 'KData':
+  if CorrectedSet:
+    if CutSet:
+      DataFile = 'Data/ID3_eventlist_lowE_corrected_cut1.txt'
+    else:
+      DataFile = 'Data/ID3_eventlist_lowE_corrected.txt'
   else:
-    DataFile = 'Data/ID3_eventlist_lowE_corrected.txt'
-else:
-  if CutSet:
-    DataFile = 'Data/ID3_eventlist_lowE_cut1.txt'
-  else:
-    DataFile = 'Data/ID3_eventlist_lowE.txt'
+    if CutSet:
+      DataFile = 'Data/ID3_eventlist_lowE_cut1.txt'
+    else:
+      DataFile = 'Data/ID3_eventlist_lowE.txt'
+elif DataSource == 'Eric':
+  DataFile = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
 
 
 # definition of observables
@@ -46,18 +50,20 @@ total_efficiency_pdf = RooHistPdf('total_efficiency_pdf','total_efficiency_pdf',
 # detector specific parameters
 voltage = RooRealVar('voltage','applied voltage',6.4)
 
-#FWHM_heat = 0.71 #me@baseline
 FWHM_heat = 0.82 #Eric@10keV
 FWHM_rec = RecoilResolutionFromHeat(FWHM_heat,voltage.getVal(),10)
 sigma_rec = RooRealVar('sigma_rec','recoil energy resolution',FWHM_rec/2.35)
 
-#FWHM_ion = 0.69 #me
 FWHM_ion = 0.72 #Eric
 sigma_ion = RooRealVar('sigma_ion','ionization energy resolution',FWHM_ion/2.35)
 
 
 # dataset
-realdata = RooDataSet.read(DataFile,RooArgList(time,rec,ion))
+if DataSource == 'Eric':
+  realdata = RooDataSet.read(DataFile,RooArgList(rec,ion))
+elif DataSource == 'KData':
+  realdata = RooDataSet.read(DataFile,RooArgList(time,rec,ion))
+else: print "Wrong data source"
 realdata_scatter = realdata.createHistogram(rec,ion,Energy['rec']['bins'],Energy['ion']['bins'])
 realdata_graph = TGraphFromDataSet(realdata)
 events = int(realdata.numEntries())
@@ -65,8 +71,11 @@ events = int(realdata.numEntries())
 
 # -----------------------------------------------------------------------------------------
 # definition of gamma peaks
-ion_scaling = RooRealVar('ion_scaling','scaling factor ionization energy',1.0,0.9,1.1)
-rec_scaling = RooRealVar('rec_scaling','scaling factor recoil energy',1.0,0.9,1.1)
+ion_scaling = RooRealVar('ion_scaling','scaling factor ionization energy',1.0,0.95,1.05)
+rec_scaling = RooRealVar('rec_scaling','scaling factor recoil energy',1.0,0.95,1.05)
+if DataSource == 'Eric':
+  ion_scaling.setConstant(kTRUE)
+  rec_scaling.setConstant(kTRUE)
 ER_centroid.SetParameter(0,6.4) #ER_centroid used for calculation of peak position in Erec
 
 V49_ion_energy = RooRealVar('V49_ion_energy','V49 peak ion energy',4.97)
