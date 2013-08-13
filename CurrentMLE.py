@@ -10,9 +10,9 @@ EnergyRecMax = 20.
 
 
 #switches and input parameters to control script
-wimp_mass = 10 #set wimp mass or switch signal of entirely (with False)
+wimp_mass = 8 #set wimp mass or switch signal of entirely (with False)
 MC_sets = int(1e3) #set number of MC simulations: 0 means none at all
-SavePlots = False #flag decides whether plots are saved
+SavePlots = True #flag decides whether plots are saved
 
 DataFile = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
 
@@ -211,7 +211,7 @@ final_pdf.plotOn(ionframe, RooFit.Components("V49_ion_pdf"), RooFit.LineColor(kR
 final_pdf.plotOn(ionframe, RooFit.Components("Cr51_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Mn54_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Fe55_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-#final_pdf.plotOn(ionframe, RooFit.Components("Co57_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(ionframe, RooFit.Components("Co57_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Zn65_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Ge68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("Ga68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
@@ -230,7 +230,7 @@ final_pdf.plotOn(recframe, RooFit.Components("V49_rec_pdf"), RooFit.LineColor(kR
 final_pdf.plotOn(recframe, RooFit.Components("Cr51_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Mn54_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Fe55_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
-#final_pdf.plotOn(recframe, RooFit.Components("Co57_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
+final_pdf.plotOn(recframe, RooFit.Components("Co57_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Zn65_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Ge68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Ga68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
@@ -277,7 +277,7 @@ recframe.Draw()
 # Monte Carlo statistics output
 if MC_sets:
   MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion),RooFit.Verbose(kFALSE),RooFit.FitOptions(RooFit.PrintLevel(-1),RooFit.NumCPU(2)),RooFit.Extended(kTRUE))
-  MC_study.generateAndFit(MC_sets,events,kFALSE)
+  MC_study.generateAndFit(MC_sets,events,kTRUE)#keep generated data
 
   FitParams = FitResult.floatParsFinal()
   NumFitParams = FitParams.getSize()
@@ -396,3 +396,8 @@ if SavePlots:
   if MC_sets:
     c2.SaveAs('%iGeV_param-stats.png'%wimp_mass)
     c3.SaveAs('%iGeV_signal-stats.png'%wimp_mass)
+
+
+for i in range(MC_sets):
+  print i, MC_study.fitParams(i).find('N_signal').getVal()
+  

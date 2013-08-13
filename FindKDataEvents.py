@@ -8,8 +8,8 @@ import Functions
 DetectorName = 'ID3'
 KDataFile = 'Data/Run12_ID3_bckg_with_subrecords.root'
 OutFileName = False#'Data/ID3_eventlist_lowE_corrected.txt'
-EnergyIonMax = 14
-EnergyRecMax = 25
+EnergyIonMax = 10
+EnergyRecMax = 20
 IonFactor = 1.0/1.029
 HeatFactor = 1.0/1.017
 Voltage = 6.4
@@ -139,7 +139,7 @@ EventGraphCuts.SetMarkerColor(kMagenta)
 
 # wimp signal
 if wimp_mass:
-  gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistriRangeExtended.C")
+  gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistriAdapted.C")
 
   Functions.TriggerEfficiency.SetParameter(0, E_Thresh)
   Functions.TriggerEfficiency.SetParameter(1, FWHM_rec)
