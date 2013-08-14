@@ -337,7 +337,7 @@ if MC_sets:
     gPad.Update()
     paramline.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
 
-    parampullframe = (MC_study.plotPull(parameter,RooFit.FitGauss(kTRUE)))
+    parampullframe = MC_study.plotPull(parameter,RooFit.FitGauss(kTRUE))
     parampullframe.SetTitle('MC pull distri '+paramname)
     ParamPullFrameList.append(parampullframe)
     pad.cd(3)
@@ -398,6 +398,12 @@ if SavePlots:
     c3.SaveAs('%iGeV_signal-stats.png'%wimp_mass)
 
 
+N_sig_list = []
 for i in range(MC_sets):
-  print i, MC_study.fitParams(i).find('N_signal').getVal()
-  
+  value = MC_study.fitParams(i).find('N_signal').getVal()
+  print i, value 
+  N_sig_list.append(value)
+N_sig_array = np.array(N_sig_list, float)
+N_sig_array.sort()
+c = N_sig_array[0.9*MC_sets]
+print N_sig_array[0.9*MC_sets]
