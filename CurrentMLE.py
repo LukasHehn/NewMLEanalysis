@@ -11,7 +11,7 @@ EnergyRecMax = 20.
 
 #switches and input parameters to control script
 wimp_mass = 8 #set wimp mass or switch signal of entirely (with False)
-MC_sets = int(1e3) #set number of MC simulations: 0 means none at all
+MC_sets = int(1e4) #set number of MC simulations: 0 means none at all
 SavePlots = True #flag decides whether plots are saved
 
 DataFile = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
@@ -63,7 +63,7 @@ V49_rec_pos = RooFormulaVar('V49_rec_pos','@0*@1',RooArgList(V49_rec_energy,rec_
 V49_rec_pdf = RooGaussian('V49_rec_pdf','V49 peak pdf in recoil energy',rec,V49_rec_pos,sigma_rec)
 V49_pdf = RooProdPdf('V49_pdf','V49 peak pdf',V49_ion_pdf,V49_rec_pdf)
 V49_pdf_eff = RooProdPdf('V49_pdf_eff','eff corr V49 peak pdf',V49_pdf,total_efficiency_pdf)
-N_V49 = RooRealVar('N_V49','evts of V49 peak (4.97keV)',16.,0.,30.)
+N_V49 = RooRealVar('N_V49','evts of V49 peak (4.97keV)',16.,0.,events)
 
 
 Cr51_ion_energy = RooRealVar('Cr51_ion_energy','Cr51 peak ion energy',5.46)
@@ -73,7 +73,7 @@ Cr51_rec_energy = RooRealVar('Cr51_rec_energy','v_rec_energy',ER_centroid.GetX(C
 Cr51_rec_pos = RooFormulaVar('Cr51_rec_pos','@0*@1',RooArgList(Cr51_rec_energy,rec_scaling))
 Cr51_rec = RooGaussian('Cr51_rec_pdf','Cr51_rec_pdf with shifted mean',rec,Cr51_rec_pos,sigma_rec)
 Cr51_pdf = RooProdPdf('Cr51_pdf','Cr51 peak pdf',Cr51_ion,Cr51_rec)
-N_Cr51 = RooRealVar('N_Cr51','evts of 51Cr peak (5.46keV)',11.,0.,30.)
+N_Cr51 = RooRealVar('N_Cr51','evts of 51Cr peak (5.46keV)',11.,0.,events)
 
 
 Mn54_ion_energy = RooRealVar('Mn54_ion_energy','Mn54_ion_energy',5.99)
@@ -83,7 +83,7 @@ Mn54_rec_energy = RooRealVar('Mn54_rec_energy','Mn54_rec_energy',ER_centroid.Get
 Mn54_rec_pos = RooFormulaVar('Mn54_rec_pos','@0*@1',RooArgList(Mn54_rec_energy,rec_scaling))
 Mn54_rec = RooGaussian('Mn54_rec_pdf','Mn54_rec_pdf with shifted mean',rec,Mn54_rec_pos,sigma_rec)
 Mn54_pdf = RooProdPdf('Mn54_pdf','Mn54 peak pdf',Mn54_ion,Mn54_rec)
-N_Mn54 = RooRealVar('N_Mn54','evts of 54Mn peak (5.99keV)',4.,0.,10.)
+N_Mn54 = RooRealVar('N_Mn54','evts of 54Mn peak (5.99keV)',4.,0.,events)
 
 
 Fe55_ion_energy = RooRealVar('Fe55_ion_energy','Fe55_ion_energy',6.54)
@@ -93,7 +93,7 @@ Fe55_rec_energy = RooRealVar('Fe55_rec_energy','Fe55_rec_energy',ER_centroid.Get
 Fe55_rec_pos = RooFormulaVar('Fe55_rec_pos','@0*@1',RooArgList(Fe55_rec_energy,rec_scaling))
 Fe55_rec = RooGaussian('Fe55_rec_pdf','Fe55_rec_pdf with shifted mean',rec,Fe55_rec_pos,sigma_rec)
 Fe55_pdf = RooProdPdf('Fe55_pdf','Fe55 peak pdf',Fe55_ion,Fe55_rec)
-N_Fe55 = RooRealVar('N_Fe55','evts of 55Fe peak (6.54keV)',31.,0.,60.)
+N_Fe55 = RooRealVar('N_Fe55','evts of 55Fe peak (6.54keV)',31.,0.,events)
 
 
 Co57_ion_energy = RooRealVar('Co57_ion_energy','Co57_ion_energy',7.11)
@@ -103,7 +103,7 @@ Co57_rec_energy = RooRealVar('Co57_rec_energy','Co57_rec_energy',ER_centroid.Get
 Co57_rec_pos = RooFormulaVar('Co57_rec_pos','@0*@1',RooArgList(Co57_rec_energy,rec_scaling))
 Co57_rec = RooGaussian('Co57_rec_pdf','Co57_rec_pdf with shifted mean',rec,Co57_rec_pos,sigma_rec)
 Co57_pdf = RooProdPdf('Co57_pdf','Co57 peak pdf',Co57_ion,Co57_rec)
-N_Co57 = RooRealVar('N_Co57','evts of 57Co peak (7.11keV)',0.,0.,20.)
+N_Co57 = RooRealVar('N_Co57','evts of 57Co peak (7.11keV)',0.,0.,events)
 
 
 Zn65_ion_energy = RooRealVar('Zn65_ion_energy','Zn65_ion_energy',8.98)
@@ -113,7 +113,7 @@ Zn65_rec_energy = RooRealVar('Zn65_rec_energy','Zn65_rec_energy',ER_centroid.Get
 Zn65_rec_pos = RooFormulaVar('Zn65_rec_pos','@0*@1',RooArgList(Zn65_rec_energy,rec_scaling))
 Zn65_rec = RooGaussian('Zn65_rec_pdf','Zn65_rec_pdf with shifted mean',rec,Zn65_rec_pos,sigma_rec)
 Zn65_pdf = RooProdPdf('Zn65_pdf','Zn65 peak pdf',Zn65_ion,Zn65_rec)
-N_Zn65 = RooRealVar('N_Zn65','evts of 65Zn peak (8.98keV)',110.,70.,130.)
+N_Zn65 = RooRealVar('N_Zn65','evts of 65Zn peak (8.98keV)',110.,0.,events)
 
 
 Ga68_ion_energy = RooRealVar('Ga68_ion_energy','Ga68_ion_energy',9.66)
@@ -123,7 +123,7 @@ Ga68_rec_energy = RooRealVar('Ga68_rec_energy','Ga68_rec_energy',ER_centroid.Get
 Ga68_rec_pos = RooFormulaVar('Ga68_rec_pos','@0*@1',RooArgList(Ga68_rec_energy,rec_scaling))
 Ga68_rec = RooGaussian('Ga68_rec_pdf','Ga68_rec_pdf with shifted mean',rec,Ga68_rec_pos,sigma_rec)
 Ga68_pdf = RooProdPdf('Ga68_pdf','Ga68 peak pdf',Ga68_ion,Ga68_rec)
-N_Ga68 = RooRealVar('N_Ga68','evts of 68Ga peak (9.66keV)',32.,0.,60.)
+N_Ga68 = RooRealVar('N_Ga68','evts of 68Ga peak (9.66keV)',32.,0.,events)
 
 
 Ge68_ion_energy = RooRealVar('Ge68_ion_energy','Ge68_ion_energy',10.37)
@@ -133,7 +133,7 @@ Ge68_rec_energy = RooRealVar('Ge68_rec_energy','Ge68_rec_energy',ER_centroid.Get
 Ge68_rec_pos = RooFormulaVar('Ge68_rec_pos','@0*@1',RooArgList(Ge68_rec_energy,rec_scaling))
 Ge68_rec = RooGaussian('Ge68_rec_pdf','Ge68 peak pdf in rec',rec,Ge68_rec_pos,sigma_rec)
 Ge68_pdf = RooProdPdf('Ge68_pdf','Ge68 peak pdf',Ge68_ion,Ge68_rec)
-N_Ge68 = RooRealVar('N_Ge68','evts of 68Ge peak (10.37keV)',0.,0.,100.)
+N_Ge68 = RooRealVar('N_Ge68','evts of 68Ge peak (10.37keV)',0.,0.,events)
 # -----------------------------------------------------------------------------------------
 
 # wimp signal
@@ -276,8 +276,18 @@ recframe.Draw()
 
 # Monte Carlo statistics output
 if MC_sets:
-  MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion),RooFit.Verbose(kFALSE),RooFit.FitOptions(RooFit.PrintLevel(-1),RooFit.NumCPU(2)),RooFit.Extended(kTRUE))
-  MC_study.generateAndFit(MC_sets,events,kTRUE)#keep generated data
+  MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion),RooFit.Silence(), RooFit.Extended(kTRUE), RooFit.FitOptions(RooFit.Save(kTRUE)))
+  MC_study.generateAndFit(MC_sets)
+
+  N_sig_list = []
+  for i in range(MC_sets):
+    value = MC_study.fitParams(i).find('N_signal').getVal()
+    print i, value 
+    N_sig_list.append(value)
+  N_sig_array = np.array(N_sig_list, float)
+  N_sig_array.sort()
+  c = N_sig_array[0.9*MC_sets]
+  print N_sig_array[0.9*MC_sets]
 
   FitParams = FitResult.floatParsFinal()
   NumFitParams = FitParams.getSize()
@@ -398,12 +408,13 @@ if SavePlots:
     c3.SaveAs('%iGeV_signal-stats.png'%wimp_mass)
 
 
-N_sig_list = []
-for i in range(MC_sets):
-  value = MC_study.fitParams(i).find('N_signal').getVal()
-  print i, value 
-  N_sig_list.append(value)
-N_sig_array = np.array(N_sig_list, float)
-N_sig_array.sort()
-c = N_sig_array[0.9*MC_sets]
-print N_sig_array[0.9*MC_sets]
+if MC_sets:
+  N_sig_list = []
+  for i in range(MC_sets):
+    value = MC_study.fitParams(i).find('N_signal').getVal()
+    print i, value 
+    N_sig_list.append(value)
+  N_sig_array = np.array(N_sig_list, float)
+  N_sig_array.sort()
+  c = N_sig_array[0.9*MC_sets]
+  print N_sig_array[0.9*MC_sets]
