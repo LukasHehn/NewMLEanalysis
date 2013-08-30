@@ -12,7 +12,7 @@ EnergyRecMax = 20.
 #switches and input parameters to control script
 wimp_mass = 8 #set wimp mass or switch signal of entirely (with False)
 MC_sets = int(1e4) #set number of MC simulations: 0 means none at all
-SavePlots = True #flag decides whether plots are saved
+SavePlots = False #flag decides whether plots are saved
 
 DataFile = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
 
@@ -103,7 +103,7 @@ Co57_rec_energy = RooRealVar('Co57_rec_energy','Co57_rec_energy',ER_centroid.Get
 Co57_rec_pos = RooFormulaVar('Co57_rec_pos','@0*@1',RooArgList(Co57_rec_energy,rec_scaling))
 Co57_rec = RooGaussian('Co57_rec_pdf','Co57_rec_pdf with shifted mean',rec,Co57_rec_pos,sigma_rec)
 Co57_pdf = RooProdPdf('Co57_pdf','Co57 peak pdf',Co57_ion,Co57_rec)
-N_Co57 = RooRealVar('N_Co57','evts of 57Co peak (7.11keV)',0.,0.,events)
+N_Co57 = RooRealVar('N_Co57','evts of 57Co peak (7.11keV)',2.,0.,events)
 
 
 Zn65_ion_energy = RooRealVar('Zn65_ion_energy','Zn65_ion_energy',8.98)
@@ -152,7 +152,7 @@ flat_gamma_bckgd_hist = FlatGammaBckgd2DEric(sigma_ion.getVal(),sigma_rec.getVal
 flat_gamma_bckgd_hist.Multiply(total_efficiency)
 flat_gamma_bckgd_datahist = RooDataHist('flat_gamma_bckgd_datahist','flat_gamma_bckgd_datahist',RooArgList(rec,ion),flat_gamma_bckgd_hist)
 flat_gamma_bckgd_pdf = RooHistPdf('flat_gamma_bckgd_pdf','flat_gamma_bckgd_pdf',RooArgSet(rec,ion),flat_gamma_bckgd_datahist)
-N_flat = RooRealVar('N_flat','bckgd events',70.,40.,100.)
+N_flat = RooRealVar('N_flat','bckgd events',70.,0.,events)
 
 
 if wimp_mass:
@@ -163,7 +163,7 @@ else:
 
 
 # manual mode
-nll = RooNLLVar('nll','nll',final_pdf,realdata,RooFit.NumCPU(2),RooFit.PrintEvalErrors(2),RooFit.Extended(kTRUE),RooFit.Verbose(kFALSE))
+nll = RooNLLVar('nll','nll',final_pdf,realdata, RooFit.PrintEvalErrors(2), RooFit.Extended(kTRUE), RooFit.Verbose(kFALSE))
 minuit = RooMinuit(nll)
 minuit.migrad() #find minimum
 minuit.hesse() #symmetric errors
@@ -217,8 +217,6 @@ final_pdf.plotOn(ionframe, RooFit.Components("Ge68_ion_pdf"), RooFit.LineColor(k
 final_pdf.plotOn(ionframe, RooFit.Components("Ga68_ion_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(ionframe, RooFit.Components("signal_pdf"), RooFit.LineColor(kMagenta), RooFit.LineWidth(3))
 final_pdf.paramOn(ionframe,RooFit.Format('NEU',RooFit.AutoPrecision(2)),RooFit.Layout(0.1,0.55,0.9),RooFit.ShowConstants(kFALSE))
-red_chi2_ion = ionframe.chiSquare("model", "data", ndf)
-#print "reduced chi2 for ion:",red_chi2_ion
 
 
 recframe = rec.frame()
@@ -235,8 +233,6 @@ final_pdf.plotOn(recframe, RooFit.Components("Zn65_rec_pdf"), RooFit.LineColor(k
 final_pdf.plotOn(recframe, RooFit.Components("Ge68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("Ga68_rec_pdf"), RooFit.LineColor(kRed), RooFit.LineWidth(2), RooFit.LineStyle(kDashed))
 final_pdf.plotOn(recframe, RooFit.Components("signal_pdf"), RooFit.LineColor(kMagenta), RooFit.LineWidth(3))
-red_chi2_rec = recframe.chiSquare("model", "data", ndf)
-#print "reduced chi2 for rec:",red_chi2_rec
 
 
 # Plotting of fit results (PDFs and projected spectra)
@@ -276,7 +272,7 @@ recframe.Draw()
 
 # Monte Carlo statistics output
 if MC_sets:
-  MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion),RooFit.Silence(), RooFit.Extended(kTRUE), RooFit.FitOptions(RooFit.Save(kTRUE)))
+  MC_study = RooMCStudy(final_pdf,RooArgSet(rec,ion), RooFit.Silence(), RooFit.Extended(kTRUE), RooFit.FitOptions(RooFit.Save(kTRUE)))
   MC_study.generateAndFit(MC_sets)
 
   N_sig_list = []
@@ -313,6 +309,7 @@ if MC_sets:
   for i in range(NumFitParams):
     parameter = FitParams[i]
     paramname = parameter.GetName()
+    paramvalue = parameter.getVal()
 
     paramline = TLine()
     paramline.SetLineWidth(2)
@@ -327,8 +324,8 @@ if MC_sets:
       pad.SetFillColor(kYellow-9)
       pad.SetFillStyle(4100)
 
-    paramnllframe = parameter.frame()
-    paramnllframe.SetTitle('NLL fit '+paramname)
+    paramnllframe = parameter.frame(RooFit.Title('NLL fit '+paramname))
+    #paramnllframe.SetTitle('NLL fit '+paramname)
     nll.plotOn(paramnllframe, RooFit.Precision(1e-5),RooFit.ShiftToZero())
     paramnllframe.SetMaximum(20.)
     paramnllframe.SetMinimum(0.)
@@ -336,18 +333,18 @@ if MC_sets:
     pad.cd(1)
     paramnllframe.Draw()
     gPad.Update()
-    paramline.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
+    paramline.DrawLine(paramvalue,gPad.GetUymin(),paramvalue,gPad.GetUymax())
 
-    paramdistriframe = MC_study.plotParam(parameter)
-    paramdistriframe.SetTitle('MC distri '+paramname)
+    paramdistriframe = MC_study.plotParam(parameter,RooFit.Title('MC distri '+paramname))
+    #paramdistriframe.SetTitle('MC distri '+paramname)
     ParamDistriFrameList.append(paramdistriframe)
     pad.cd(2)
     paramdistriframe.Draw()
     paramdistriframe.getHist().Fit('gaus','QEM')
     gPad.Update()
-    paramline.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
+    paramline.DrawLine(paramvalue,gPad.GetUymin(),paramvalue,gPad.GetUymax())
 
-    parampullframe = MC_study.plotPull(parameter,RooFit.FitGauss(kTRUE))
+    parampullframe = MC_study.plotPull(parameter, RooFit.FitGauss())
     parampullframe.SetTitle('MC pull distri '+paramname)
     ParamPullFrameList.append(parampullframe)
     pad.cd(3)
@@ -361,6 +358,7 @@ if MC_sets:
   if wimp_mass:
     parameter = FitResult.floatParsFinal().find('N_signal')
     paramname = parameter.GetName()
+    paramvalue = parameter.getVal()
 
     nllvalue = nll.getVal()
 
@@ -374,18 +372,18 @@ if MC_sets:
     paramnllframe.SetMinimum(0.)
     paramnllframe.Draw()
     gPad.Update()
-    paramline.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
+    paramline.DrawLine(paramvalue,gPad.GetUymin(),paramvalue,gPad.GetUymax())
 
     c3.cd(2)
-    paramdistriframe = MC_study.plotParam(parameter)
+    paramdistriframe = MC_study.plotParam(parameter, RooFit.FrameBins(200), RooFit.FrameRange(0.,10.))
     paramdistriframe.SetTitle('MC distri '+paramname)
     paramdistriframe.Draw()
-    paramdistriframe.getHist().Fit('gaus','QEM')
+    #paramdistriframe.getHist().Fit('gaus','QEM')
     gPad.Update()
-    paramline.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
+    paramline.DrawLine(paramvalue,gPad.GetUymin(),paramvalue,gPad.GetUymax())
 
     c3.cd(3)
-    parampullframe = (MC_study.plotPull(parameter,RooFit.FitGauss(kTRUE)))
+    parampullframe = MC_study.plotPull(parameter, RooFit.FrameBins(100), RooFit.FrameRange(-5,5), RooFit.FitGauss(kTRUE))
     parampullframe.SetTitle('MC pull distri '+paramname)
     parampullframe.Draw()
     gPad.Update()
@@ -398,7 +396,7 @@ if MC_sets:
     gPad.Update()
     nll_line.SetLineStyle(1)
     nll_line.DrawLine(nllvalue,gPad.GetUymin(),nllvalue,gPad.GetUymax())
-    paramline.DrawLine(parameter.getVal(),gPad.GetUymin(),parameter.getVal(),gPad.GetUymax())
+    paramline.DrawLine(paramvalue,gPad.GetUymin(),paramvalue,gPad.GetUymax())
 
 
 if SavePlots:
@@ -411,10 +409,9 @@ if SavePlots:
 if MC_sets:
   N_sig_list = []
   for i in range(MC_sets):
-    value = MC_study.fitParams(i).find('N_signal').getVal()
-    print i, value 
+    value = cc.fitParams(i).find('N_signal').getVal()
+    #print i, value 
     N_sig_list.append(value)
-  N_sig_array = np.array(N_sig_list, float)
-  N_sig_array.sort()
-  c = N_sig_array[0.9*MC_sets]
-  print N_sig_array[0.9*MC_sets]
+  N_sig_list.sort()
+  limit = N_sig_list[int(0.9*MC_sets)]
+  print "N_signal limit from 90% of MC toy set fits",limit
