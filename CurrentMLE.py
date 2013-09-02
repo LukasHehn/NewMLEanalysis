@@ -17,8 +17,8 @@ from ROOT import RooFit as rf
 DataFile = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
 EnergyIonMax = 10.
 EnergyRecMax = 20.
-wimp_mass = 8  # if False, signal is switched off
-MC_sets = int(1e4)  # number of MC simulations: 0 means none at all
+wimp_mass = 8
+MC_sets = int(1e3)  # number of MC simulations: 0 means none at all
 SavePlots = False
 
 
@@ -134,14 +134,13 @@ N_Ge68 = ROOT.RooRealVar('N_Ge68', 'evts of 68Ge peak (10.37keV)', 0., 0., event
 
 
 # Definition of WIMP signal and pdf
-if wimp_mass:
-    signal_hist = Functions.WimpSignal2DEric(wimp_mass, sigma_ion.getVal(), sigma_rec.getVal())
-    signal_hist.Multiply(total_efficiency)
-    signal_datahist = ROOT.RooDataHist('signal_datahist', 'signal_datahist', 
-                                       ROOT.RooArgList(rec, ion), signal_hist)
-    signal_pdf = ROOT.RooHistPdf('signal_pdf', 'signal_pdf', 
-                                 ROOT.RooArgSet(rec, ion), signal_datahist)
-    N_signal = ROOT.RooRealVar('N_signal', 'WIMP signal events', 0., 0., 10.)
+signal_hist = Functions.WimpSignal2DEric(wimp_mass, sigma_ion.getVal(), sigma_rec.getVal())
+signal_hist.Multiply(total_efficiency)
+signal_datahist = ROOT.RooDataHist('signal_datahist', 'signal_datahist', 
+                                   ROOT.RooArgList(rec, ion), signal_hist)
+signal_pdf = ROOT.RooHistPdf('signal_pdf', 'signal_pdf', 
+                             ROOT.RooArgSet(rec, ion), signal_datahist)
+N_signal = ROOT.RooRealVar('N_signal', 'WIMP signal events', 0., 0., 10.)
 
 
 # Definition of flat gamma background pdf
@@ -154,24 +153,23 @@ flat_gamma_bckgd_pdf = ROOT.RooHistPdf('flat_gamma_bckgd_pdf', 'flat_gamma_bckgd
 N_flat = ROOT.RooRealVar('N_flat', 'bckgd events', 70., 0., events)
 
 
-# Definition of final pdf depending on wheather WIMP mass is given or not
-if wimp_mass:
-    pdf_list = ROOT.RooArgList(signal_pdf, flat_gamma_bckgd_pdf, V49_pdf, Cr51_pdf, Co57_pdf, Mn54_pdf, Fe55_pdf, Zn65_pdf, Ga68_pdf)  # Ge68 not in energy range and therefore excluded
-    parameter_list = ROOT.RooArgList(N_signal, N_flat, N_V49, N_Cr51, N_Co57, N_Mn54, N_Fe55, N_Zn65, N_Ga68)
-    final_pdf = ROOT.RooAddPdf('final_pdf', 'final_pdf', pdf_list, parameter_list)
-else:
-    pdf_list = ROOT.RooArgList(flat_gamma_bckgd_pdf, V49_pdf, Cr51_pdf, Mn54_pdf, Fe55_pdf, Co57_pdf, Zn65_pdf, Ga68_pdf, Ge68_pdf)
-    parameter_list = ROOT.RooArgList(N_flat, N_V49, N_Cr51, N_Mn54, N_Fe55, N_Co57, N_Zn65, N_Ga68, N_Ge68)
-    final_pdf = ROOT.RooAddPdf('final_pdf', 'final_pdf', pdf_list, parameter_list)
-    
-final_hist = final_pdf.createHistogram('final_hist', rec, 
-                                       rf.Binning(int(EnergyRecMax*10)), 
+# Definition of background only as well as background plus signal pdf
+bckgd_and_sig_pdfs = ROOT.RooArgList(signal_pdf, flat_gamma_bckgd_pdf, V49_pdf, Cr51_pdf, Co57_pdf, Mn54_pdf, Fe55_pdf, Zn65_pdf, Ga68_pdf)  # Ge68 not in energy range and therefore excluded
+bckgd_only_pdfs = ROOT.RooArgList(flat_gamma_bckgd_pdf, V49_pdf, Cr51_pdf, Mn54_pdf, Fe55_pdf, Co57_pdf, Zn65_pdf, Ga68_pdf, Ge68_pdf)
+
+bckgd_and_sig_params = ROOT.RooArgList(N_signal, N_flat, N_V49, N_Cr51, N_Co57, N_Mn54, N_Fe55, N_Zn65, N_Ga68)
+bckgd_only_params = ROOT.RooArgList(N_flat, N_V49, N_Cr51, N_Mn54, N_Fe55, N_Co57, N_Zn65, N_Ga68, N_Ge68)
+
+bckgd_and_sig_pdf = ROOT.RooAddPdf('bckgd_and_sig_pdf', 'bckgd_and_sig_pdf', bckgd_and_sig_pdfs, bckgd_and_sig_params)
+bckgd_only_pdf = ROOT.RooAddPdf('bckgd_only_pdf', 'bckgd_only_pdf', bckgd_only_pdfs, bckgd_only_params)
+
+bckgd_and_sig_hist = bckgd_and_sig_pdf.createHistogram('bckgd_and_sig_hist', rec, rf.Binning(int(EnergyRecMax*10)), 
                                        rf.YVar(ion, rf.Binning(int(EnergyIonMax*10)))
                                        )
 
 
 # Create negative log likelihood (NLL) object manually and minimize it
-nll = ROOT.RooNLLVar('nll', 'nll', final_pdf, realdata, rf.Extended(ROOT.kTRUE), 
+nll = ROOT.RooNLLVar('nll', 'nll', bckgd_and_sig_pdf, realdata, rf.Extended(ROOT.kTRUE), 
                      rf.PrintEvalErrors(2), rf.Verbose(ROOT.kFALSE))
 minuit = ROOT.RooMinuit(nll)
 minuit.migrad()  # find minimum
@@ -184,26 +182,25 @@ FitResult.Print('v')
 
 
 # Calculate cross section limit from fit results and output of results
-if wimp_mass:
-    signal_parameter = FitResult.floatParsFinal().find('N_signal')
-    wimp_events = signal_parameter.getVal()
-    error_low = signal_parameter.getAsymErrorLo()
-    error_high = signal_parameter.getAsymErrorHi()
-    wimp_events_limit = wimp_events + 1.28 * error_high
-    livetime = 197.  # ID3 livetime after cuts in days
-    mass = 0.160  # ID3 detector mass in kg
-    rate = signal_hist.Integral('WIDTH')  # option width absolutely necessary
-    signal_events = rate * livetime * mass * 1e6
-    sigma_limit = wimp_events_limit / signal_events
-    result_overview = {'wimp events' : wimp_events,
-                       'wimp events limit' : wimp_events_limit,
-                       'rate' : rate,
-                       'sigma limit' : sigma_limit,
-                       }
-    
-    print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10}'.format('wimp_mass', 'Rate', 'N_signal', 'ErrorLow', 'ErrorHigh', 'XS-limit [pb]')
-    print '-'*80
-    print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10}'.format(wimp_mass, rate, wimp_events, error_low, error_high, sigma_limit)
+signal_parameter = FitResult.floatParsFinal().find('N_signal')
+wimp_events = signal_parameter.getVal()
+error_low = signal_parameter.getAsymErrorLo()
+error_high = signal_parameter.getAsymErrorHi()
+wimp_events_limit = wimp_events + 1.28 * error_high
+livetime = 197.  # ID3 livetime after cuts in days
+mass = 0.160  # ID3 detector mass in kg
+rate = signal_hist.Integral('WIDTH')  # option width absolutely necessary
+signal_events = rate * livetime * mass * 1e6
+sigma_limit = wimp_events_limit / signal_events
+result_overview = {'wimp events' : wimp_events, 'wimp events limit' : wimp_events_limit,
+                   'rate' : rate, 'sigma limit' : sigma_limit,
+                   }
+
+print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10}'.format('wimp_mass', 'Rate', 'N_signal', 
+                                                                'ErrorLow', 'ErrorHigh', 'XS-limit [pb]')
+print '-'*80
+print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10}'.format(wimp_mass, rate, wimp_events, 
+                                                                error_low, error_high, sigma_limit)
 
 
 # Definition of RooFit projections over both energies starting with appropriate binning
@@ -214,56 +211,56 @@ ionframe = ion.frame()
 ionframe.SetTitle('Projection in E_{ion}')
 realdata.plotOn(ionframe, rf.Name('data'), 
                 rf.Binning(ionbins), rf.MarkerSize(1.0))
-final_pdf.plotOn(ionframe, rf.Components("flat_gamma_bckgd_pdf"), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("flat_gamma_bckgd_pdf"), 
                  rf.LineColor(ROOT.kGreen), rf.LineWidth(2))
-final_pdf.plotOn(ionframe, rf.Name('model'), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Name('model'), 
                  rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
-final_pdf.plotOn(ionframe, rf.Components("V49_ion_pdf"), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("V49_ion_pdf"), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-final_pdf.plotOn(ionframe, rf.Components("Cr51_ion_pdf"), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Cr51_ion_pdf"), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-final_pdf.plotOn(ionframe, rf.Components("Mn54_ion_pdf"), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Mn54_ion_pdf"), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-final_pdf.plotOn(ionframe, rf.Components("Fe55_ion_pdf"), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Fe55_ion_pdf"), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-#final_pdf.plotOn(ionframe, rf.Components("Co57_ion_pdf"), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Co57_ion_pdf"), 
+                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Zn65_ion_pdf"), 
+                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+#bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ge68_ion_pdf"), 
                  #rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-final_pdf.plotOn(ionframe, rf.Components("Zn65_ion_pdf"), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ga68_ion_pdf"), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-final_pdf.plotOn(ionframe, rf.Components("Ge68_ion_pdf"), 
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-final_pdf.plotOn(ionframe, rf.Components("Ga68_ion_pdf"), 
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-final_pdf.plotOn(ionframe, rf.Components("signal_pdf"), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("signal_pdf"), 
                  rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))
-final_pdf.paramOn(ionframe, rf.Format('NEU', rf.AutoPrecision(2)), 
+bckgd_and_sig_pdf.paramOn(ionframe, rf.Format('NEU', rf.AutoPrecision(2)), 
                   rf.Layout(0.1, 0.55, 0.9), rf.ShowConstants(ROOT.kFALSE))
 
 recframe = rec.frame()
 recframe.SetTitle('Projection in E_{rec}')
 realdata.plotOn(recframe, rf.Name("data"), 
                 rf.Binning(recbins), rf.MarkerColor(ROOT.kBlack), rf.MarkerSize(1.0))
-final_pdf.plotOn(recframe, rf.Components("flat_gamma_bckgd_pdf"), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("flat_gamma_bckgd_pdf"), 
                  rf.LineColor(ROOT.kGreen), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
-final_pdf.plotOn(recframe, rf.Name('model'), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Name('model'), 
                  rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
-final_pdf.plotOn(recframe, rf.Components("V49_rec_pdf"), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("V49_rec_pdf"), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-final_pdf.plotOn(recframe, rf.Components("Cr51_rec_pdf"), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Cr51_rec_pdf"), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-final_pdf.plotOn(recframe, rf.Components("Mn54_rec_pdf"), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Mn54_rec_pdf"), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-final_pdf.plotOn(recframe, rf.Components("Fe55_rec_pdf"), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Fe55_rec_pdf"), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-#final_pdf.plotOn(recframe, rf.Components("Co57_rec_pdf"), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Co57_rec_pdf"), 
+                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Zn65_rec_pdf"), 
+                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+#bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ge68_rec_pdf"), 
                  #rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-final_pdf.plotOn(recframe, rf.Components("Zn65_rec_pdf"), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ga68_rec_pdf"), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-final_pdf.plotOn(recframe, rf.Components("Ge68_rec_pdf"), 
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-final_pdf.plotOn(recframe, rf.Components("Ga68_rec_pdf"), 
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-final_pdf.plotOn(recframe, rf.Components("signal_pdf"), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("signal_pdf"), 
                  rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))
 
 
@@ -273,9 +270,9 @@ c1.Divide(2, 2)
 # final pdf and data
 c1.cd(1)
 c1.cd(1).SetLogz()
-final_hist.Draw('COL')
-final_hist.SetStats(0)
-final_hist.SetTitle('ID3 WIMP search data + best fit PDF')
+bckgd_and_sig_hist.Draw('COL')
+bckgd_and_sig_hist.SetStats(0)
+bckgd_and_sig_hist.SetTitle('ID3 WIMP search data + best fit PDF')
 realdata_graph.SetMarkerColor(ROOT.kBlack)
 realdata_graph.SetMarkerStyle(ROOT.kFullDotLarge)
 realdata_graph.Draw('SAMESP')
@@ -285,14 +282,13 @@ Functions.ER_centroid.DrawCopy('SAME')
 Functions.NR_centroid.SetLineColor(ROOT.kBlack)
 Functions.NR_centroid.SetLineWidth(1)
 Functions.NR_centroid.DrawCopy('SAME')
-if wimp_mass:
-    c1.cd(3)
-    signal_hist.Draw('CONT0')
-    signal_hist.SetStats(0)
-    signal_hist.SetContour(30)
-    realdata_graph.Draw('SAMESP')
-    Functions.ER_centroid.DrawCopy('SAME')
-    Functions.NR_centroid.DrawCopy('SAME')
+c1.cd(3)
+signal_hist.Draw('CONT0')
+signal_hist.SetStats(0)
+signal_hist.SetContour(30)
+realdata_graph.Draw('SAMESP')
+Functions.ER_centroid.DrawCopy('SAME')
+Functions.NR_centroid.DrawCopy('SAME')
 c1.cd(2)
 ionframe.Draw()
 c1.cd(4)
@@ -301,8 +297,8 @@ recframe.Draw()
 
 # Creation of Monte Carlo toy event sets and output
 if MC_sets:
-    MC_study = ROOT.RooMCStudy(final_pdf, ROOT.RooArgSet(rec, ion), rf.Silence(), 
-                               rf.Extended(ROOT.kTRUE), rf.FitOptions(rf.Save(ROOT.kTRUE)))
+    MC_study = ROOT.RooMCStudy(bckgd_only_pdf, ROOT.RooArgSet(rec, ion), rf.FitModel(bckgd_and_sig_pdf), rf.Silence(), 
+                               rf.Extended(ROOT.kTRUE), rf.FitOptions(rf.Save(ROOT.kTRUE)))  #
     MC_study.generateAndFit(MC_sets)
 
     ParamNLLFrameList = []
@@ -337,33 +333,33 @@ if MC_sets:
         pad = c2.cd(i+1)
         pad.Divide(3, 1, 0.001, 0.001)
 
-        paramnllframe = parameter.frame()
-        paramnllframe.SetTitle('NLL fit '+paramname)
-        nll.plotOn(paramnllframe, rf.Precision(1e-5), rf.ShiftToZero())
-        paramnllframe.SetMaximum(20.)
-        paramnllframe.SetMinimum(0.)
-        ParamNLLFrameList.append(paramnllframe)
+        ParamNLLFrame = parameter.frame()
+        ParamNLLFrame.SetTitle('NLL fit '+paramname)
+        nll.plotOn(ParamNLLFrame, rf.Precision(1e-5), rf.ShiftToZero())
+        ParamNLLFrame.SetMaximum(20.)
+        ParamNLLFrame.SetMinimum(0.)
+        ParamNLLFrameList.append(ParamNLLFrame)
         pad.cd(1)
-        paramnllframe.Draw()
+        ParamNLLFrame.Draw()
         ROOT.gPad.Update()
         paramline.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
 
-        paramdistriframe = MC_study.plotParam(parameter)
-        paramdistriframe.SetTitle('MC distri '+paramname)
-        ParamDistriFrameList.append(paramdistriframe)
+        ParamDistriFrame = MC_study.plotParam(parameter)
+        ParamDistriFrame.SetTitle('MC distri '+paramname)
+        ParamDistriFrameList.append(ParamDistriFrame)
         pad.cd(2)
-        paramdistriframe.Draw()
-        paramdistriframe.getHist().Fit('gaus', 'QEM')
+        ParamDistriFrame.Draw()
+        ParamDistriFrame.getHist().Fit('gaus', 'QEM')
         ROOT.gPad.Update()
         paramline.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
 
-        parampullframe = MC_study.plotPull(parameter, rf.FitGauss())
-        parampullframe.SetTitle('MC pull distri '+paramname)
-        ParamPullFrameList.append(parampullframe)
-        pad.cd(3)
-        parampullframe.Draw()
-        ROOT.gPad.Update()
-        zeroline.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
+        #ParamPullFrame = MC_study.plotPull(parameter, rf.FitGauss())
+        #ParamPullFrame.SetTitle('MC pull distri '+paramname)
+        #ParamPullFrameList.append(ParamPullFrame)
+        #pad.cd(3)
+        #ParamPullFrame.Draw()
+        #ROOT.gPad.Update()
+        #zeroline.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
 
     c2.SetCanvasSize(1200, 2400)
 
@@ -378,29 +374,29 @@ if MC_sets and wimp_mass:
     c3 = ROOT.TCanvas('c3', 'Fit Statistics WIMP Signal', 1000, 750)
     c3.Divide(2, 2)
     c3.cd(1)
-    paramnllframe = parameter.frame()
-    paramnllframe.SetTitle('NLL fit '+paramname)
-    nll.plotOn(paramnllframe, rf.Precision(1e-5), rf.ShiftToZero())
-    paramnllframe.SetMaximum(20.)
-    paramnllframe.SetMinimum(0.)
-    paramnllframe.Draw()
+    ParamNLLFrame = parameter.frame()
+    ParamNLLFrame.SetTitle('NLL fit '+paramname)
+    nll.plotOn(ParamNLLFrame, rf.Precision(1e-5), rf.ShiftToZero())
+    ParamNLLFrame.SetMaximum(20.)
+    ParamNLLFrame.SetMinimum(0.)
+    ParamNLLFrame.Draw()
     ROOT.gPad.Update()
     paramline.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
 
     c3.cd(2)
-    paramdistriframe = MC_study.plotParam(parameter, rf.FrameBins(200), rf.FrameRange(0., 10.))
-    paramdistriframe.SetTitle('MC distri '+paramname)
-    paramdistriframe.Draw()
-    #paramdistriframe.getHist().Fit('gaus', 'QEM')
+    ParamDistriFrame = MC_study.plotParam(parameter, rf.FrameBins(200), rf.FrameRange(0., 10.))
+    ParamDistriFrame.SetTitle('MC distri '+paramname)
+    ParamDistriFrame.Draw()
+    #ParamDistriFrame.getHist().Fit('gaus', 'QEM')
     ROOT.gPad.Update()
     paramline.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
 
-    c3.cd(3)
-    parampullframe = MC_study.plotPull(parameter, rf.FrameBins(100), rf.FrameRange(-5, 5), rf.FitGauss(ROOT.kTRUE))
-    parampullframe.SetTitle('MC pull distri '+paramname)
-    parampullframe.Draw()
-    ROOT.gPad.Update()
-    zeroline.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
+    #c3.cd(3)
+    #ParamPullFrame = MC_study.plotPull(parameter, rf.FrameBins(100), rf.FrameRange(-5, 5), rf.FitGauss(ROOT.kTRUE))
+    #ParamPullFrame.SetTitle('MC pull distri '+paramname)
+    #ParamPullFrame.Draw()
+    #ROOT.gPad.Update()
+    #zeroline.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
 
     c3.cd(4)
     MCnllframe = MC_study.plotNLL()
@@ -427,8 +423,8 @@ if MC_sets:
     print '{0:30} {1:10}'.format('from 90% from MC toy set fits:', result_overview['wimp events limit MC'])
 
 
-if SavePlots:
-    c1.SaveAs('%iGeV_PDFs.png'%wimp_mass)
-    if MC_sets:
-        c2.SaveAs('%iGeV_param-stats.png'%wimp_mass)
-        c3.SaveAs('%iGeV_signal-stats.png'%wimp_mass)
+#if SavePlots:
+    #c1.SaveAs('%iGeV_PDFs.png'%wimp_mass)
+    #if MC_sets:
+        #c2.SaveAs('%iGeV_param-stats.png'%wimp_mass)
+        #c3.SaveAs('%iGeV_signal-stats.png'%wimp_mass)
