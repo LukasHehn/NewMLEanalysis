@@ -1,4 +1,13 @@
 #!/usr/bin/env python
+
+######################################################
+#
+# Frequently used parameters like detector masses, low mass paper cross section limit results and
+# energy binning choice.
+# Lukas Hehn, 2013
+#
+######################################################
+
 ENERGY_BINSIZE = 0.1
 ENERGY_BINNING = {
   'ion' : {'Min' : 0., 'Max' : 10., 'Binsize' : ENERGY_BINSIZE},\
