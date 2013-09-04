@@ -1,15 +1,15 @@
 #!/usr/bin/env python
-binsize = 0.1
-Energy = {
-  'ion' : {'min' : 0., 'max' : 10., 'binsize' : binsize},\
-  'rec' : {'min' : 0., 'max' : 20., 'binsize' : binsize}
+ENERGY_BINSIZE = 0.1
+ENERGY_BINNING = {
+  'ion' : {'Min' : 0., 'Max' : 10., 'Binsize' : ENERGY_BINSIZE},\
+  'rec' : {'Min' : 0., 'Max' : 20., 'Binsize' : ENERGY_BINSIZE}
 }
-Energy['ion']['bins'] = int((Energy['ion']['max']-Energy['ion']['min'])/Energy['ion']['binsize'])
-Energy['rec']['bins'] = int((Energy['rec']['max']-Energy['rec']['min'])/Energy['rec']['binsize'])
+ENERGY_BINNING['ion']['Bins'] = int((ENERGY_BINNING['ion']['Max']-ENERGY_BINNING['ion']['Min'])/ENERGY_BINNING['ion']['Binsize'])
+ENERGY_BINNING['rec']['Bins'] = int((ENERGY_BINNING['rec']['Max']-ENERGY_BINNING['rec']['Min'])/ENERGY_BINNING['rec']['Binsize'])
 
 
 # measured fiducial and physical masses for all ID detectors from Run 12
-Masses = {
+DETECTOR_MASSES = {
    'ID2' : {'Mass' : {'Fiducial' : 0.158, 'Total': 0.3723}},\
    'ID3' : {'Mass' : {'Fiducial' : 0.158, 'Total': 0.3658}},\
    'ID4' : {'Mass' : {'Fiducial' : 0.158, 'Total': 0.3590}},\
@@ -23,7 +23,7 @@ Masses = {
    }
 
 
-EricsLowEnergyCuts = {
+BASELINE_CUTS_ERIC = {
    'ID3' : {
       'Coll1' : {'Min' : 0.1, 'Max' : 1.0},\
       'Coll2' : {'Min' : 0.1, 'Max' : 1.8},\
@@ -39,7 +39,7 @@ EricsLowEnergyCuts = {
       'Veto1' : {'Min' : 0.1, 'Max' : 2.9},\
       'Veto2' : {'Min' : 0.1, 'Max' : 1.7},\
       'Guard1' : {'Min' : 0.1, 'Max' : 1.3},\
-      'Guard2' : {'Min' : -999, 'Max' : 999},#no data from Eric\
+      'Guard2' : {'Min' : -999, 'Max' : 999},  # no data from Eric available\
       'Heat' : {'Min' : 0.1, 'Max' : 1.4},\
      },\
    'ID6' : {
@@ -47,7 +47,7 @@ EricsLowEnergyCuts = {
       'Coll2' : {'Min' : 0.1, 'Max' : 2.0},\
       'Veto1' : {'Min' : 0.1, 'Max' : 1.3},\
       'Veto2' : {'Min' : 0.1, 'Max' : 2.5},\
-      'Guard1' : {'Min' : -999, 'Max' : 999},#no data from Eric\
+      'Guard1' : {'Min' : -999, 'Max' : 999},  # no data from Eric available\
       'Guard2' : {'Min' : 0.1, 'Max' : 1.2},\
       'Heat' : {'Min' : 0.1, 'Max' : 0.65},\
      },\
@@ -71,7 +71,7 @@ EricsLowEnergyCuts = {
       }\
    }
 
-EricsResults = {
+LOW_MASS_RESULTS_ERIC = {
   'ID3' : {
     7 : 7.90E-4,\
     8 : 1.17e-4,\

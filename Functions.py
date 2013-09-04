@@ -1,12 +1,21 @@
 #!/usr/bin/env python
+
+######################################################
+#
+# Collection of python functions and ROOT functions
+# Lukas Hehn, 2013
+#
+######################################################
+
 import datetime as dt
 import calendar
-#from ROOT import TF1, exp, log, TH1F, TH2F
-from ROOT import *
-from Parameters import *
-from couchdbkit import Server, Database
-import couchdbkit
 import numpy as np
+import couchdbkit
+
+from couchdbkit import Server, Database
+from ROOT import TH1F, TH2F, TF1, TMath
+from parameters import *
+
 
 
 # global
@@ -71,38 +80,38 @@ def date_to_unixtime(date):
 
 # root functions
 # trigger efficiency from DAQ trigger threshold and resolution on heat channel
-TriggerEfficiency = TF1('trigger_efficiency','0.5*(1+ROOT::Math::erf(((x-[0])/([1]*sqrt(2)))))', 0, 25)
-TriggerEfficiency.SetNpx(2500)
-TriggerEfficiency.SetParName(0, 'Threshold')
-TriggerEfficiency.SetParName(1, 'Resolution')
-TriggerEfficiency.SetTitle('Trigger Efficiency;E_{Heat} (keV);Efficiency')
+TRIGGER_EFFICIENCY = TF1('trigger_efficiency', '0.5*(1+ROOT::Math::erf(((x-[0])/([1]*sqrt(2)))))', 0, 25)
+TRIGGER_EFFICIENCY.SetNpx(2500)
+TRIGGER_EFFICIENCY.SetParName(0, 'Threshold')
+TRIGGER_EFFICIENCY.SetParName(1, 'Resolution')
+TRIGGER_EFFICIENCY.SetTitle('Trigger Efficiency;E_{Heat} (keV);Efficiency')
 
 
 # measured fiducial efficiency (division of neutron histogram with/without fiducial cut)
-FiducialEfficiency = TF1('fiducial_efficiency','[2]*(1-exp([0]*(x-[1])))', 0, 25)
-FiducialEfficiency.SetNpx(2500)
-FiducialEfficiency.SetParName(0,'Slope')
-FiducialEfficiency.SetParName(1,'Cut off')
-FiducialEfficiency.SetParName(2,'Maximum')
-FiducialEfficiency.SetTitle('Fiducial Efficiency;E_{ion} (keV_{ee});Efficiency')
+FIDUCIAL_EFFICIENCY = TF1('fiducial_efficiency', '[2]*(1-exp([0]*(x-[1])))', 0, 25)
+FIDUCIAL_EFFICIENCY.SetNpx(2500)
+FIDUCIAL_EFFICIENCY.SetParName(0, 'Slope')
+FIDUCIAL_EFFICIENCY.SetParName(1, 'Cut off')
+FIDUCIAL_EFFICIENCY.SetParName(2, 'Maximum')
+FIDUCIAL_EFFICIENCY.SetTitle('Fiducial Efficiency;E_{ion} (keV_{ee});Efficiency')
 
 
 # Lindhard quenching relation (nuclear recoil)
-LindhardQuenching = TF1('lindhard_quenching','[0]*(x^[1])', 0, 25)
+LindhardQuenching = TF1('lindhard_quenching', '[0]*(x^[1])', 0, 25)
 LindhardQuenching.SetNpx(2500)
-LindhardQuenching.SetParName(0,'a')
-LindhardQuenching.SetParName(1,'b')
+LindhardQuenching.SetParName(0, 'a')
+LindhardQuenching.SetParName(1, 'b')
 LindhardQuenching.FixParameter(0, 0.16)
 LindhardQuenching.FixParameter(1, 0.18)
 LindhardQuenching.SetTitle('Lindhard Quenching for Nuclear Recoils;E_{Recoil} [keV];Q(E_{Rec})')
 
 
 # Recoil energy estimator for nuclear recoils
-RecoilEstimator = TF1('recoil_energy_estimator','(x/(1+[0]/[1]))*(1+[0]/[1]*0.16*x^0.18)', 0, 25)
+RecoilEstimator = TF1('recoil_energy_estimator', '(x/(1+[0]/[1]))*(1+[0]/[1]*0.16*x^0.18)', 0, 25)
 RecoilEstimator.SetNpx(2500)
-RecoilEstimator.SetParName(0,'Voltage')
-RecoilEstimator.SetParName(1,'Creation Potential')
-RecoilEstimator.FixParameter(1,3.0)
+RecoilEstimator.SetParName(0, 'Voltage')
+RecoilEstimator.SetParName(1, 'Creation Potential')
+RecoilEstimator.FixParameter(1, 3.0)
 RecoilEstimator.SetTitle('E_{Rec} estimator from E_{Heat};E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
 
 
@@ -116,15 +125,15 @@ ER_centroid_real.SetNpx(3000)
 ER_centroid_real.SetParameter(0, 6.4)
 ER_centroid_real.SetTitle('Electron Recoil Centroid (Real Part Only);E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
 
-#ER_centroid = TF1('ER_centroid','x*(1+(0.16*x^0.18)*([0]/[1]))/(1+[0]/[1])',0,25)
+#ER_centroid = TF1('ER_centroid', 'x*(1+(0.16*x^0.18)*([0]/[1]))/(1+[0]/[1])', 0, 25)
 #ER_centroid.SetNpx(2500)
-#ER_centroid.SetParName(0,'Voltage')
-#ER_centroid.SetParName(1,'Creation Potential')
-#ER_centroid.FixParameter(1,3.0)
+#ER_centroid.SetParName(0, 'Voltage')
+#ER_centroid.SetParName(1, 'Creation Potential')
+#ER_centroid.FixParameter(1, 3.0)
 #ER_centroid_real.SetTitle('Electron Recoil Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
 
 
-NR_centroid = TF1('NR_centroid','0.16*x^1.18',0,25)
+NR_centroid = TF1('NR_centroid', '0.16*x^1.18', 0, 25)
 NR_centroid.SetNpx(2500)
 NR_centroid.SetTitle('Nuclear Recoil Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
 
@@ -133,34 +142,34 @@ ER_centroid = RecoilEstimator.Clone('ER_centroid')
 ER_centroid.SetTitle('Electron Recoil Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
 
 
-ER_centroid_cut = TF1('ER_centroid','x*(1+(0.16*x^0.18)*([0]/[1]))/(1+[0]/[1])-[4]*sqrt([2]**2+([3]*(1+(0.16*x^0.18)*([0]/3))/(1+([0]/3)))**2)',0,25)
+ER_centroid_cut = TF1('ER_centroid', 'x*(1+(0.16*x^0.18)*([0]/[1]))/(1+[0]/[1])-[4]*sqrt([2]**2+([3]*(1+(0.16*x^0.18)*([0]/3))/(1+([0]/3)))**2)', 0, 25)
 ER_centroid_cut.SetNpx(2500)
-ER_centroid_cut.SetParName(0,'Voltage')
-ER_centroid_cut.SetParName(1,'Creation Potential')
-ER_centroid_cut.FixParameter(1,3.0)
-ER_centroid_cut.SetParName(2,'Sigma_Ion')
-ER_centroid_cut.SetParName(3,'Sigma_Rec')
-ER_centroid_cut.SetParName(4,'Gamma Cut')
+ER_centroid_cut.SetParName(0, 'Voltage')
+ER_centroid_cut.SetParName(1, 'Creation Potential')
+ER_centroid_cut.FixParameter(1, 3.0)
+ER_centroid_cut.SetParName(2, 'Sigma_Ion')
+ER_centroid_cut.SetParName(3, 'Sigma_Rec')
+ER_centroid_cut.SetParName(4, 'Gamma Cut')
 ER_centroid_cut.SetTitle('Cut on ER Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
 
 
-def RecoilResolutionFromHeat(FWHM_heat,voltage,Erec):
+def fwhm_rec_from_heat(FWHM_heat, voltage, Erec):
   Q = LindhardQuenching.Eval(Erec)
   FWHM_rec = FWHM_heat * ((1+voltage/3.0)/(1+1.18*Q*voltage/3.0))
   return FWHM_rec
 
 
-def GetEnergyRecoilFromEstimator(energy_ee,voltage):
+def recoil_energy_estimator(energy_ee, voltage):
   function = RecoilEstimator
-  function.SetParameter(0,voltage)
-  function.FixParameter(1,3.0) #electron-hole creation potential
+  function.SetParameter(0, voltage)
+  function.FixParameter(1, 3.0) #electron-hole creation potential
   energy_recoil = function.GetX(energy_ee)
   return energy_recoil
 
 
-def GetVoltageFlagList(Detector, Runtype):
-  RunName, VoltageFlag = [],[]
-  infile = open(inpath+Detector+'_voltage_'+Runtype+'.txt','r')
+def voltage_flag_list(Detector, Runtype):
+  RunName, VoltageFlag = [], []
+  infile = open(inpath+Detector+'_voltage_'+Runtype+'.txt', 'r')
   for line in infile:
     runname, voltage = line.split()
     RunName.append(str(runname))
@@ -169,27 +178,27 @@ def GetVoltageFlagList(Detector, Runtype):
   return [RunName, VoltageFlag]
 
 
-def GetVoltageFlag(InList, RunName):
+def voltage_flag(InList, RunName):
   try:
     flag = InList[1][InList[0].index(RunName)]
     return flag
   except ValueError:
-    print "error finding run",RunName
+    print "error finding run", RunName
     return 0
 
 
-def GetSambaNumber(Detector):
-  if Detector in ['ID5','ID403','FID401']:
+def samba_number(Detector):
+  if Detector in ['ID5', 'ID403', 'FID401']:
     return 'S1'
-  elif Detector in ['ID3','ID401','FID402']:
+  elif Detector in ['ID3', 'ID401', 'FID402']:
     return 'S2'
-  elif Detector in ['ID4','ID6','ID404']:
+  elif Detector in ['ID4', 'ID6', 'ID404']:
     return 'S3'
-  elif Detector in ['ID2','ID402','ID405']:
+  elif Detector in ['ID2', 'ID402', 'ID405']:
     return 'S4'
 
 
-def GetERAConstants(Detector):
+def era_constants(Detector):
   s = couchdbkit.Server('https://edelweissuser:edwdbw1mp@edelweiss.cloudant.com')
   db = s['analysis']
   vr = db.view('constants/run12', include_docs=True)
@@ -199,15 +208,15 @@ def GetERAConstants(Detector):
   return constantDoc[Detector]
 
 
-def ReadInWimpSpectrumEric(mass_of_wimp):
+def wimp_spectrum_eric(WIMP_MASS):
   basedir="/kalinka/home/hehn/PhD/LowMassEric/"
-  filename=basedir+"wimpsignal_M"+str(mass_of_wimp)+".txt"
+  filename=basedir+"wimpsignal_M"+str(WIMP_MASS)+".txt"
 
-  Energies,Rates = [], []
+  Energies, Rates = [], []
 
-  #print "reading WIMP spectrum from:",filename
+  #print "reading WIMP spectrum from:", filename
 
-  infile = open(filename,'r')
+  infile = open(filename, 'r')
   for line in infile:
     energy, rate = line.split()
     Energies.append(float(energy))
@@ -216,7 +225,7 @@ def ReadInWimpSpectrumEric(mass_of_wimp):
 
   Energybins = np.array(Energies, dtype=np.float)
 
-  Hist = TH1F('wimp_spectrum_%sGeV'%mass_of_wimp,'Spectrum Eric %sGeV;E_{recoil} [keV];Rate [evts/kg/day/0.02keV]'%mass_of_wimp,Energybins.size-1, Energybins.flatten('C'))
+  Hist = TH1F('wimp_spectrum_%sGeV'%WIMP_MASS, 'Spectrum Eric %sGeV;E_{recoil} [keV];Rate [evts/kg/day/0.02keV]'%WIMP_MASS, Energybins.size-1, Energybins.flatten('C'))
 
   for i in range(len(Energies)):
     Hist.Fill(Energies[i], Rates[i])
@@ -224,80 +233,84 @@ def ReadInWimpSpectrumEric(mass_of_wimp):
   return Hist
 
 
-def WimpSignal2DEric(mass_of_wimp,sigma_ion,sigma_rec):
-  spectrum = ReadInWimpSpectrumEric(mass_of_wimp)
+def wimp_signal(WIMP_MASS, SIGMA_ION, SIGMA_REC, rec_bins=200, rec_min=0., rec_max=20., ion_bins=100, ion_min=0., ion_max=10.):
+  spectrum = wimp_spectrum_eric(WIMP_MASS)
 
-  denom_i=1./(2*sigma_ion**2)
-  denom_r=1./(2*sigma_rec**2)
-  hist = TH2F('wimp_signal_%sGeV'%mass_of_wimp,'WIMP signal %sGeV;E_{rec} (keVnr);E_{ion} (keVee);Rate (cts/kg*day)'%mass_of_wimp,Energy['rec']['bins'],Energy['rec']['min'],Energy['rec']['max'],Energy['ion']['bins'],Energy['ion']['min'],Energy['ion']['max'])
-  for recbin in range(1,hist.GetNbinsX()+1):
+  denom_i=1./(2*SIGMA_ION**2)
+  denom_r=1./(2*SIGMA_REC**2)
+  hist = TH2F('wimp_signal_%sGeV'%WIMP_MASS, 'WIMP signal %sGeV;E_{rec} (keVnr);E_{ion} (keVee);Rate (cts/kg*day)'%WIMP_MASS, 
+              rec_bins, rec_min, rec_max, ion_bins, ion_min, ion_max)
+  for recbin in range(1, hist.GetNbinsX()+1):
     Erec = hist.GetXaxis().GetBinCenter(recbin)
-    for ionbin in range(1,hist.GetNbinsY()+1):
+    for ionbin in range(1, hist.GetNbinsY()+1):
       Eion = hist.GetYaxis().GetBinCenter(ionbin)
       summe=0
-      for specbin in range(1,spectrum.GetNbinsX()+1):
+      for specbin in range(1, spectrum.GetNbinsX()+1):
 	ErecSpec = spectrum.GetXaxis().GetBinCenter(specbin)
 	Q = LindhardQuenching.Eval(ErecSpec)
 	wimprate = spectrum.GetBinContent(specbin)
-	tutu = denom_r*pow((Erec-ErecSpec),2)
+	tutu = denom_r*pow((Erec-ErecSpec), 2)
 	kernel = TMath.exp(-tutu-denom_i*(Eion-Q*ErecSpec)**2)
 	summe += (kernel*wimprate)
-      hist.SetBinContent(recbin,ionbin,0.02002*summe/(2*3.141592*sigma_rec*sigma_ion))
+      hist.SetBinContent(recbin, ionbin, 0.02002*summe/(2*3.141592*SIGMA_REC*SIGMA_ION))
   return hist
 
 
-def FlatGammaBckgd2DEric(sigma_ion,sigma_rec):
-  denom_i=1./(2*sigma_ion**2)
-  denom_r=1./(2*sigma_rec**2)
-  spectrum = TH1F('flat_gamma_spectrum','flat gamma spectrum',Energy['rec']['bins'],Energy['rec']['min'],Energy['rec']['max'])
-  hist = TH2F('flat_gamma_bckgd','Flat Gamma Bckgd;E_{rec} (keVnr);E_{ion} (keVee);Rate (cts/kg*day)',Energy['rec']['bins'],Energy['rec']['min'],Energy['rec']['max'],Energy['ion']['bins'],Energy['ion']['min'],Energy['ion']['max'])
-  for recbin in range(1,hist.GetNbinsX()+1):
+def flat_gamma_bckgd(SIGMA_ION, SIGMA_REC, rec_bins=200, rec_min=0., rec_max=20., ion_bins=100, ion_min=0., ion_max=10.):
+  denom_i=1./(2*SIGMA_ION**2)
+  denom_r=1./(2*SIGMA_REC**2)
+  spectrum = TH1F('flat_gamma_spectrum', 'flat gamma spectrum', 
+                  rec_bins, rec_min, rec_max)  # this spectrum could actually contain a varying bckgd rate!
+  hist = TH2F('flat_gamma_bckgd', 'Flat Gamma Bckgd;E_{rec} (keVnr);E_{ion} (keVee);Rate (cts/kg*day)', 
+              rec_bins, rec_min, rec_max, ion_bins, ion_min, ion_max)
+  for recbin in range(1, hist.GetNbinsX()+1):
     Erec = hist.GetXaxis().GetBinCenter(recbin)
-    for ionbin in range(1,hist.GetNbinsY()+1):
+    for ionbin in range(1, hist.GetNbinsY()+1):
       Eion = hist.GetYaxis().GetBinCenter(ionbin)
       summe=0
-      for specbin in range(1,spectrum.GetNbinsX()+1):
+      for specbin in range(1, spectrum.GetNbinsX()+1):
 	ErecSpec = spectrum.GetXaxis().GetBinCenter(specbin)
 	EionSpec = ER_centroid_real.Eval(ErecSpec)
 	tutu = denom_r*(Erec-ErecSpec)**2
 	kernel = TMath.exp(-tutu-denom_i*(Eion-EionSpec)**2)
 	summe += kernel
-      hist.SetBinContent(recbin,ionbin,summe)
+      hist.SetBinContent(recbin, ionbin, summe)
   return hist
 
 
-def Simple2DEfficiencyID3(E_thresh, sigma_rec):
-  hist = TH2F('efficiency','efficiency;E_{rec} (keVnr);E_{ion} (keVee);Efficiency',Energy['rec']['bins'],Energy['rec']['min'],Energy['rec']['max'],Energy['ion']['bins'],Energy['ion']['min'],Energy['ion']['max'])
+def efficiency_ID3(E_thresh, SIGMA_REC):
+  hist = TH2F('efficiency', 'efficiency;E_{rec} (keVnr);E_{ion} (keVee);Efficiency', 
+              ENERGY_BINNING['rec']['Bins'], ENERGY_BINNING['rec']['Min'], ENERGY_BINNING['rec']['Max'], 
+              ENERGY_BINNING['ion']['Bins'], ENERGY_BINNING['ion']['Min'], ENERGY_BINNING['ion']['Max'])
 
-  TriggerEfficiency.FixParameter(0, E_thresh)
-  TriggerEfficiency.FixParameter(1, sigma_rec)
-  FiducialEfficiency.FixParameter(0, -1.876)
-  FiducialEfficiency.FixParameter(1, 1.247)
-  FiducialEfficiency.FixParameter(2, 0.947)
+  TRIGGER_EFFICIENCY.FixParameter(0, E_thresh)
+  TRIGGER_EFFICIENCY.FixParameter(1, SIGMA_REC)
+  FIDUCIAL_EFFICIENCY.FixParameter(0, -1.876)
+  FIDUCIAL_EFFICIENCY.FixParameter(1, 1.247)
+  FIDUCIAL_EFFICIENCY.FixParameter(2, 0.947)
 
-  for recbin in range(1,hist.GetNbinsX()+1):
+  for recbin in range(1, hist.GetNbinsX()+1):
     Erec = hist.GetXaxis().GetBinCenter(recbin)
-    eff_trigger = TriggerEfficiency.Eval(Erec)
-    for ionbin in range(1,hist.GetNbinsY()+1):
+    eff_trigger = TRIGGER_EFFICIENCY.Eval(Erec)
+    for ionbin in range(1, hist.GetNbinsY()+1):
       Eion = hist.GetYaxis().GetBinCenter(ionbin)
-      eff_fiducial = FiducialEfficiency.Eval(Eion)
+      eff_fiducial = FIDUCIAL_EFFICIENCY.Eval(Eion)
 
       if eff_trigger >= 0. and eff_fiducial >= 0.:
 	eff_total = eff_trigger * eff_fiducial
       else:
 	eff_total = 0.
-      hist.SetBinContent(recbin,ionbin,eff_total)
-      hist.SetBinError(recbin,ionbin,0.)
+      hist.SetBinContent(recbin, ionbin, eff_total)
+      hist.SetBinError(recbin, ionbin, 0.)
   return hist
 
 
-def TGraphFromDataSet(dataset):
+def tgraph_from_dataset(dataset):
   entries = dataset.numEntries()
   tgraph = TGraph()
   for event in range(entries):
     time = dataset.get(event).getRealValue('time')
     rec = dataset.get(event).getRealValue('rec')
     ion = dataset.get(event).getRealValue('ion')
-    #print event,time,rec,ion
-    tgraph.SetPoint(event,rec,ion)
+    tgraph.SetPoint(event, rec, ion)
   return tgraph

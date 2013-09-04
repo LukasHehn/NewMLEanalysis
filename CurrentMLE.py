@@ -8,7 +8,7 @@
 ######################################################
 
 import ROOT
-import Functions
+import functions
 from ROOT import RooFit as rf
 
 
@@ -38,7 +38,7 @@ SIGMA_ION = ROOT.RooRealVar('sigma_ion', 'ionization energy resolution', FWHM_IO
 
 
 # Calculation of specific detector efficiency and pdf
-total_efficiency = Functions.Simple2DEfficiencyID3(E_THRESH, FWHM_REC/2.35)
+total_efficiency = Functions.efficiency_ID3(E_THRESH, FWHM_REC/2.35)
 total_efficiency_datahist = ROOT.RooDataHist('total_efficiency_datahist', 'total_efficiency_datahist', 
                                              ROOT.RooArgList(REC, ION), total_efficiency)
 total_efficiency_pdf = ROOT.RooHistPdf('total_efficiency_pdf', 'total_efficiency_pdf', 
@@ -48,7 +48,7 @@ total_efficiency_pdf = ROOT.RooHistPdf('total_efficiency_pdf', 'total_efficiency
 # Read in of data set and output as scatter/graph
 realdata = ROOT.RooDataSet.read(DATA_FILE, ROOT.RooArgList(REC, ION))
 realdata_scatter = realdata.createHistogram(REC, ION, int(E_REC_MAX*10), int(E_ION_MAX*10))
-realdata_graph = Functions.TGraphFromDataSet(realdata)
+realdata_graph = Functions.tgraph_from_dataset(realdata)
 events = int(realdata.numEntries())
 
 
@@ -134,7 +134,7 @@ N_Ge68 = ROOT.RooRealVar('N_Ge68', 'evts of 68Ge peak (10.37keV)', 0., 0., event
 
 
 # Definition of WIMP signal and pdf
-signal_hist = Functions.WimpSignal2DEric(WIMP_MASS, SIGMA_ION.getVal(), SIGMA_REC.getVal())
+signal_hist = Functions.construct_wimp_signal(WIMP_MASS, SIGMA_ION.getVal(), SIGMA_REC.getVal())
 signal_hist.Multiply(total_efficiency)
 signal_datahist = ROOT.RooDataHist('signal_datahist', 'signal_datahist', 
                                    ROOT.RooArgList(REC, ION), signal_hist)
@@ -144,7 +144,7 @@ N_signal = ROOT.RooRealVar('N_signal', 'WIMP signal events', 0., 0., 10.)
 
 
 # Definition of flat gamma background pdf
-flat_gamma_bckgd_hist = Functions.FlatGammaBckgd2DEric(SIGMA_ION.getVal(), SIGMA_REC.getVal())
+flat_gamma_bckgd_hist = Functions.flat_gamma_bckgd(SIGMA_ION.getVal(), SIGMA_REC.getVal())
 flat_gamma_bckgd_hist.Multiply(total_efficiency)
 flat_gamma_bckgd_datahist = ROOT.RooDataHist('flat_gamma_bckgd_datahist', 'flat_gamma_bckgd_datahist', 
                                              ROOT.RooArgList(REC, ION), flat_gamma_bckgd_hist)
