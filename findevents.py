@@ -18,8 +18,8 @@ from ROOT import TGraph, gROOT, TCanvas, KDataReader
 DETECTOR_NAME = 'ID3'
 KDataFile = 'Data/Run12_ID3_bckg_with_subrecords.root'
 OutFileName = False  # 'Data/ID3_eventlist_lowE_corrected.txt'
-E_ION_MAX = 10.
-E_REC_MAX = 20.
+E_ION_MAX = 14.
+E_REC_MAX = 25.
 IonFactor = 1.0/1.029
 HeatFactor = 1.0/1.017
 VOLTAGE = 6.4
@@ -28,15 +28,20 @@ FWHM_HEAT = 0.82
 FWHM_ION = 0.72
 FWHM_REC = functions.fwhm_rec_from_heat(FWHM_HEAT, VOLTAGE, 10)
 GAMMA_CUT = 1.96  # gamma cut from ER centroid in standard deviations
-WIMP_MASS = 10  # if wimp mass set, show also signal density of wimp signal
+WIMP_MASS = 8  # if wimp mass set, show also signal density of wimp signal
 
 
+# Get dictionary with cuts for all baselines
 CUTS = BASELINE_CUTS_ERIC[DETECTOR_NAME]
-TimeList, RecList, IonList = [],  [],  []  # for normal event selection
-TimeListCuts, RecListCuts, IonListCuts = [],  [],  []  # for additional cut event selection
+
+
+# Define empty lists for event storage as well as reset event counters
+TimeList, RecList, IonList = [], [], []  # for events passing all cuts
+TimeListCuts, RecListCuts, IonListCuts = [], [], []  # for events failing additional cut
 eventcounter, cutcounter = 0, 0
 
 
+# Here events are selected from a KData file
 infile = KDataReader(KDataFile)
 
 # Get first event and total event number
@@ -46,7 +51,6 @@ print entries, "total number of events in file", KDataFile, "\n"
 
 #stamp = event.GetStamp()
 for entry in range(entries):
-    #print "entry", entry
     infile.GetEntry(entry)
     bolos = event.GetNumBolos()
 
@@ -54,9 +58,8 @@ for entry in range(entries):
     #if bolos == 1:
        #bolonum = 0
 
-        #bolo records
+        # Bolometer records
         bolo = event.GetBolo(bolonum)
-
         if IonFactor and HeatFactor:
             EnergyIon = IonFactor*bolo.GetEnergyIonFiducial()
             EnergyHeat = HeatFactor*bolo.GetEnergyHeat(1)
@@ -64,11 +67,9 @@ for entry in range(entries):
             EnergyIon = bolo.GetEnergyIonFiducial()
             EnergyHeat = bolo.GetEnergyHeat(1)
 
-        #samba records
+        # Samba records
         samba = bolo.GetSambaRecord()
-    
         EventNumber = samba.GetSambaEventNumber()
-
         UnixTime = samba.GetNtpDateSec()
         RunName = samba.GetRunName()
 
@@ -87,18 +88,18 @@ for entry in range(entries):
             if 0 < EnergyIon < E_ION_MAX and 0 < EnergyRec < E_REC_MAX:
                 Comment = ' '
                 if eventcounter%20 == 0:
-                    print '-'*80
+                    print '-'*100
                     print '{0:10} | {1:12} | {2:12} | {3:10} | {4:10} | {5:10} | {6:10}'.format('FileEntry',  'EventNumber',  'UnixTime',  'EnergyHeat',  'EnergyRec',  'EnergyIon',  'Comment')
-                    print '-'*80
+                    print '-'*100
                 if EnergyIon < 2.:
                     Comment = "Ion < 2keV"
-                if bolo.GetChi2Flag() == 1:
+                if bolo.GetChi2Flag():
                     TimeList.append(UnixTime)
                     IonList.append(EnergyIon)
                     RecList.append(EnergyRec)
                     eventcounter += 1
                 else:
-                    Comment = "failed additional cut"
+                    Comment = "failed GetChi2Flag"
                     TimeListCuts.append(UnixTime)
                     IonListCuts.append(EnergyIon)
                     RecListCuts.append(EnergyRec)
@@ -109,7 +110,8 @@ infile.Close()
 print "%i events passed all standard cuts" % eventcounter
 print "%i events failed additional cut" % cutcounter
 
-# write events in txt-file
+
+# Write events in txt-file
 if OutFileName:
     OutFile = open(OutFileName, 'w')
     for i in range(len(TimeList)):
@@ -122,7 +124,7 @@ if OutFileName:
     print 'Outfile %s written to disc' % OutFileName
 
 
-# fill events in E_rec/E_ion-TGraph and plot them on canvas
+# Fill events in E_rec/E_ion-TGraph and plot them on canvas
 EventGraph = TGraph()
 for i in range(eventcounter):
     EnergyRec = RecList[i]
@@ -134,7 +136,7 @@ EventGraph.SetMarkerStyle(ROOT.kFullDotLarge)
 EventGraph.SetMarkerColor(ROOT.kBlack)
 
 
-# same for additional set of special cut events
+# Same for additional set of special cut events
 EventGraphCuts = TGraph()
 for i in range(cutcounter):
     EnergyRec = RecListCuts[i]
@@ -145,56 +147,63 @@ EventGraphCuts.GetYaxis().SetTitle('E_{ion} [keVee]')
 EventGraphCuts.SetMarkerStyle(ROOT.kFullDotLarge)
 EventGraphCuts.SetMarkerColor(ROOT.kMagenta)
 
-# wimp signal
+
+# Get efficiency and flat gamma background
+total_efficiency = functions.simple_efficiency('ID3', E_THRESH, FWHM_REC/2.35, 
+                                               rec_bins=int(E_REC_MAX*10), rec_min=0., rec_max=E_REC_MAX, 
+                                               ion_bins=int(E_ION_MAX*10), ion_min=0., ion_max=E_ION_MAX
+                                               )
+
+gamma_bckgd = functions.flat_gamma_bckgd(FWHM_ION/2.35, FWHM_REC/2.35, 
+                                               rec_bins=int(E_REC_MAX*10), rec_min=0., rec_max=E_REC_MAX, 
+                                               ion_bins=int(E_ION_MAX*10), ion_min=0., ion_max=E_ION_MAX
+                                               )
+gamma_bckgd.Multiply(total_efficiency)
+gamma_bckgd.Scale(1./gamma_bckgd.GetMaximum())  # maximum value is 1 afterwards
+gamma_bckgd.SetStats(0)
+
+# Also get wimp signal PDF
 if WIMP_MASS:
-    total_efficiency = functions.efficiency_ID3(E_THRESH, FWHM_REC/2.35)
-    
-    signal = functions.wimp_signal(WIMP_MASS, FWHM_ION, FWHM_REC/2.35)
+    signal = functions.wimp_signal(WIMP_MASS, FWHM_ION/2.35, FWHM_REC/2.35, 
+                                               rec_bins=int(E_REC_MAX*10), rec_min=0., rec_max=E_REC_MAX, 
+                                               ion_bins=int(E_ION_MAX*10), ion_min=0., ion_max=E_ION_MAX
+                                               )
     signal.Multiply(total_efficiency)
+    signal.Scale(1./signal.GetMaximum())  # maximum value is 1 afterwards
+    signal.SetStats(0)
+    print 'Created 2D WIMP signal for %i GeV mass'%WIMP_MASS
     
-    gamma_bckgd = functions.flat_gamma_bckgd(SIGMA_ION.getVal(), SIGMA_REC.getVal())
-    gamma_bckgd.Multiply(total_efficiency)
-    #gROOT.LoadMacro("/kalinka/home/hehn/PhD/LowMassEric/WimpDistriAdapted.C")
-    
-    #functions.TRIGGER_EFFICIENCY.SetParameter(0, E_THRESH)
-    #functions.TRIGGER_EFFICIENCY.SetParameter(1, FWHM_REC)
-    #functions.TRIGGER_EFFICIENCY.SetNpx(2500)
-    
-    ## read in WIMP spectrum
-    #Signal = WimpDistri(str(WIMP_MASS), DETECTOR_NAME, FWHM_REC, FWHM_ION, TRIGGER_EFFICIENCY.GetHistogram(), 0, 0, GAMMA_CUT, VOLTAGE, 1)
-    
-    #Signal.SetTitle('WIMP Signal %i GeV'%WIMP_MASS)
-    #Signal.GetXaxis().SetTitle('E_{recoil} [keV_{nr}]')
-    #Signal.GetYaxis().SetTitle('E_{ion} [keV_{ee}]')
-    #Signal.GetXaxis().SetRangeUser(3.2, 12.8)
-    #Signal.GetYaxis().SetRangeUser(0.8, 5.8)
-    #Signal.SetStats(0)
-    #Signal.SetContour(20)
+    bckgd_plus_sig = gamma_bckgd.Clone('bckgd_plus_sig')
+    bckgd_plus_sig.Add(signal)
+    bckgd_plus_sig.SetStats(0)
+    print "Combined flat gamma background and WIMP signal both normalized to maximum of 1."
 
 
-# plot everything
-c1 = TCanvas('c1',  'Event selection for ID3', 600, 600)
-if Signal:
-    Signal.Draw('CONT0')
-    EventGraph.Draw('SAMEP')
+# Plot PDF, data and ER and NR centroids
+c1 = TCanvas('c1', 'Event selection for ID3', 600, 600)
+if signal:
+    bckgd_plus_sig.Draw('CONT0Z')
 else:
-    EventGraph.Draw('AP')
-EventGraphCuts.Draw('SAMEP')
+    gamma_bckgd.Draw('CONT0Z')
+EventGraph.Draw('SAMEP')
+#EventGraphCuts.Draw('SAMEP')
 
-# add lines for Electron Recoil and Nuclear Recoil centroids
 functions.ER_CENTROID.SetParameter(0, VOLTAGE)
-functions.ER_CENTROID.SetLineColor(kBlue)
+functions.ER_CENTROID.SetLineColor(ROOT.kBlue)
 functions.ER_CENTROID.SetLineWidth(3)
 functions.ER_CENTROID.Draw('SAME')
-functions.GAMMA_CUT.SetParameter(0, VOLTAGE)
-functions.GAMMA_CUT.SetParameter(2, FWHM_ION/2.35)
-functions.GAMMA_CUT.SetParameter(3, FWHM_REC/2.35)
-functions.GAMMA_CUT.SetParameter(4, GAMMA_CUT)
-functions.GAMMA_CUT.SetLineColor(ROOT.kBlue)
-functions.GAMMA_CUT.SetLineWidth(3)
-functions.GAMMA_CUT.SetLineStyle(7)
-functions.GAMMA_CUT.Draw('SAME')
-functions.NR_CENTROID.SetLineColor(ROOT.kMagenta)
+functions.NR_CENTROID.SetLineColor(ROOT.kBlack)
 functions.NR_CENTROID.SetLineWidth(3)
-functions.NR_CENTROID.SetLineStyle(7)
+functions.NR_CENTROID.SetLineStyle(1)
 functions.NR_CENTROID.Draw('SAME')
+
+# Plot Gamma cut line
+if GAMMA_CUT:
+    functions.GAMMA_CUT.FixParameter(0, VOLTAGE)
+    functions.GAMMA_CUT.FixParameter(2, FWHM_ION/2.35)
+    functions.GAMMA_CUT.FixParameter(3, FWHM_REC/2.35)
+    functions.GAMMA_CUT.FixParameter(4, GAMMA_CUT)
+    functions.GAMMA_CUT.SetLineColor(ROOT.kBlue)
+    functions.GAMMA_CUT.SetLineWidth(3)
+    functions.GAMMA_CUT.SetLineStyle(7)
+    functions.GAMMA_CUT.Draw('SAME')
