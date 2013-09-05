@@ -14,19 +14,20 @@ from ROOT import RooFit as rf
 
 
 # Global variables used in the script
+DETECTOR_NAME = 'ID3'
 DATA_FILE = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
 E_ION_MAX = 10.
 E_REC_MAX = 20.
-WIMP_MASS = 15
-NUM_MC_SETS = int(1e1)  # number of MC toy event sets: 0 means no MC study
+WIMP_MASS = 8
+NUM_MC_SETS = int(1e3)  # number of MC toy event sets: 0 means no MC study
 SAVE_PLOTS = True
 
 
 # Detector specific parameters like resolutions
 VOLTAGE = 6.4
 E_THRESH = 3.874
-FWHM_HEAT = 0.82  # value for ID3 adopted from Eric
-FWHM_ION = 0.72  # value for ID3 adopted from Eric
+FWHM_HEAT = 0.82  # value for ID3 adopted from Eric for 10keV
+FWHM_ION = 0.72  # value for ID3 adopted from Eric for 10keV
 FWHM_REC = functions.fwhm_rec_from_heat(FWHM_HEAT, VOLTAGE, 10.)
 
 
@@ -38,7 +39,7 @@ SIGMA_ION = ROOT.RooRealVar('sigma_ion', 'ionization energy resolution', FWHM_IO
 
 
 # Calculation of specific detector efficiency and pdf
-total_efficiency = functions.efficiency_ID3(E_THRESH, FWHM_REC/2.35)
+total_efficiency = functions.simple_efficiency(DETECTOR_NAME, E_THRESH, FWHM_REC/2.35)
 total_efficiency_datahist = ROOT.RooDataHist('total_efficiency_datahist', 'total_efficiency_datahist', 
                                              ROOT.RooArgList(REC, ION), total_efficiency)
 total_efficiency_pdf = ROOT.RooHistPdf('total_efficiency_pdf', 'total_efficiency_pdf', 
@@ -57,7 +58,7 @@ ion_scaling = ROOT.RooRealVar('ion_scaling', 'scaling factor ionization energy',
 rec_scaling = ROOT.RooRealVar('rec_scaling', 'scaling factor recoil energy', 1.0, 0.95, 1.05)
 ion_scaling.setConstant(ROOT.kTRUE)
 rec_scaling.setConstant(ROOT.kTRUE)
-functions.ER_CENTROID.SetParameter(0, 6.4)  # ER_centroid for calculation of peak position in Erec
+functions.ER_CENTROID.FixParameter(0, VOLTAGE)  # ER_centroid for calculation of peak position in Erec
 
 V49_ion_energy = ROOT.RooRealVar('V49_ion_energy', 'V49 peak ion energy', 4.97)
 V49_ion_pos = ROOT.RooFormulaVar('V49_ion_pos', '@0*@1', ROOT.RooArgList(V49_ion_energy, ion_scaling))
@@ -140,7 +141,7 @@ signal_datahist = ROOT.RooDataHist('signal_datahist', 'signal_datahist',
                                    ROOT.RooArgList(REC, ION), signal_hist)
 signal_pdf = ROOT.RooHistPdf('signal_pdf', 'signal_pdf', 
                              ROOT.RooArgSet(REC, ION), signal_datahist)
-N_signal = ROOT.RooRealVar('N_signal', 'WIMP signal events', 0., 0., 10.)
+N_signal = ROOT.RooRealVar('N_signal', 'WIMP signal events', 0., -10., 10.)
 
 
 # Definition of flat gamma background pdf
@@ -155,10 +156,10 @@ N_flat = ROOT.RooRealVar('N_flat', 'bckgd events', 70., 0., events)
 
 # Definition of background only as well as background plus signal pdf
 bckgd_and_sig_pdfs = ROOT.RooArgList(signal_pdf, flat_gamma_bckgd_pdf, V49_pdf, Cr51_pdf, Co57_pdf, Mn54_pdf, Fe55_pdf, Zn65_pdf, Ga68_pdf)  # Ge68 not in energy range and therefore excluded
-bckgd_only_pdfs = ROOT.RooArgList(flat_gamma_bckgd_pdf, V49_pdf, Cr51_pdf, Mn54_pdf, Fe55_pdf, Co57_pdf, Zn65_pdf, Ga68_pdf, Ge68_pdf)
+bckgd_only_pdfs = ROOT.RooArgList(flat_gamma_bckgd_pdf, V49_pdf, Cr51_pdf, Co57_pdf, Mn54_pdf, Fe55_pdf, Zn65_pdf, Ga68_pdf)
 
 bckgd_and_sig_params = ROOT.RooArgList(N_signal, N_flat, N_V49, N_Cr51, N_Co57, N_Mn54, N_Fe55, N_Zn65, N_Ga68)
-bckgd_only_params = ROOT.RooArgList(N_flat, N_V49, N_Cr51, N_Mn54, N_Fe55, N_Co57, N_Zn65, N_Ga68, N_Ge68)
+bckgd_only_params = ROOT.RooArgList(N_flat, N_V49, N_Cr51, N_Co57, N_Mn54, N_Fe55, N_Zn65, N_Ga68)
 
 bckgd_and_sig_pdf = ROOT.RooAddPdf('bckgd_and_sig_pdf', 'bckgd_and_sig_pdf', bckgd_and_sig_pdfs, bckgd_and_sig_params)
 bckgd_only_pdf = ROOT.RooAddPdf('bckgd_only_pdf', 'bckgd_only_pdf', bckgd_only_pdfs, bckgd_only_params)
@@ -171,7 +172,7 @@ bckgd_and_sig_hist.SetTitle('ID3 WIMP search data + best fit PDF')
 
 # Create negative log likelihood (NLL) object manually and minimize it
 nll = ROOT.RooNLLVar('nll', 'nll', bckgd_and_sig_pdf, realdata, rf.Extended(ROOT.kTRUE), 
-                     rf.PrintEvalErrors(2), rf.Verbose(ROOT.kFALSE))
+                     rf.PrintEvalErrors(0), rf.Verbose(ROOT.kFALSE))
 minuit = ROOT.RooMinuit(nll)
 minuit.migrad()  # find minimum
 minuit.hesse()  # find symmetric errors
@@ -184,24 +185,22 @@ FitResult.Print('v')
 
 # Calculate cross section limit from fit results and output of results
 signal_parameter = FitResult.floatParsFinal().find('N_signal')
-wimp_events = signal_parameter.getVal()
-error_low = signal_parameter.getAsymErrorLo()
-error_high = signal_parameter.getAsymErrorHi()
-wimp_events_limit = wimp_events + 1.28 * error_high
+N_sig = signal_parameter.getVal()
+sigma_n_sig_low = signal_parameter.getAsymErrorLo()
+sigma_n_sig_high = signal_parameter.getAsymErrorHi()
+N_max = N_sig + 1.28 * sigma_n_sig_high
 livetime = 197.  # ID3 livetime after cuts in days
 mass = 0.160  # ID3 detector mass in kg
 rate = signal_hist.Integral('WIDTH')  # option width absolutely necessary
-signal_events = rate * livetime * mass * 1e6
-sigma_limit = wimp_events_limit / signal_events
-result_overview = {'wimp events' : wimp_events, 'wimp events limit' : wimp_events_limit,
-                   'rate' : rate, 'sigma limit' : sigma_limit, 'signal events' : signal_events
-                   }
+N_wimp = rate * livetime * mass * 1e6
+xs_max = N_max / N_wimp
+result_overview = {'N_sig' : N_sig, 'N_max' : N_max, 'rate' : rate, 'xs_max' : xs_max, 'N_wimp' : N_wimp}
 
 print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10}'.format('WIMP_MASS', 'Rate', 'N_signal', 
                                                                 'ErrorLow', 'ErrorHigh', 'XS-limit [pb]')
 print '-'*80
-print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10}'.format(WIMP_MASS, rate, wimp_events, 
-                                                                error_low, error_high, sigma_limit)
+print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10}'.format(WIMP_MASS, rate, N_sig, 
+                                                                sigma_n_sig_low, sigma_n_sig_high, xs_max)
 
 
 # Definition of RooFit projections over both energies starting with appropriate binning
@@ -297,7 +296,7 @@ recframe.Draw()
 # Creation of Monte Carlo toy event sets and output
 if NUM_MC_SETS:
     MC_study = ROOT.RooMCStudy(bckgd_only_pdf, ROOT.RooArgSet(REC, ION), rf.FitModel(bckgd_and_sig_pdf), rf.Silence(), 
-                               rf.Extended(ROOT.kTRUE), rf.FitOptions(rf.Save(ROOT.kTRUE)))  #
+                               rf.Extended(ROOT.kTRUE), rf.FitOptions(rf.Save(ROOT.kTRUE)))  # , rf.FitModel(bckgd_and_sig_pdf)
     MC_study.generateAndFit(NUM_MC_SETS)
 
     ParamNLLFrameList = []
@@ -377,19 +376,21 @@ if NUM_MC_SETS and WIMP_MASS:
     ParamNLLFrame = parameter.frame()
     ParamNLLFrame.SetTitle('NLL fit '+paramname)
     nll.plotOn(ParamNLLFrame, rf.Precision(1e-5), rf.ShiftToZero())
-    ParamNLLFrame.SetMaximum(20.)
-    ParamNLLFrame.SetMinimum(0.)
+    #ParamNLLFrame.SetMaximum(20.)
+    #ParamNLLFrame.SetMinimum(0.)
     ParamNLLFrame.Draw()
     ROOT.gPad.Update()
     paramline.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
+    zeroline.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
 
     c3.cd(2)
-    ParamDistriFrame = MC_study.plotParam(parameter, rf.FrameBins(200), rf.FrameRange(0., 10.))
+    ParamDistriFrame = MC_study.plotParam(parameter)  #, rf.FrameBins(200), rf.FrameRange(0., 10.))
     ParamDistriFrame.SetTitle('MC distri '+paramname)
     ParamDistriFrame.Draw()
     #ParamDistriFrame.getHist().Fit('gaus', 'QEM')
     ROOT.gPad.Update()
     paramline.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
+    zeroline.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
 
     #c3.cd(3)
     #ParamPullFrame = MC_study.plotPull(parameter, rf.FrameBins(100), rf.FrameRange(-5, 5), rf.FitGauss(ROOT.kTRUE))
@@ -416,17 +417,17 @@ if NUM_MC_SETS:
         value = MC_study.fitParams(i).find('N_signal').getVal()
         N_sig_list.append(value)
     N_sig_list.sort()
-    result_overview['wimp events limit MC'] = N_sig_list[int(0.9*NUM_MC_SETS)]
-    result_overview['sigma limit MC'] = result_overview['wimp events limit MC']/result_overview['signal events']
+    result_overview['N_sig_MC'] = N_sig_list[int(0.9*NUM_MC_SETS)]
+    result_overview['xs_max_MC'] = result_overview['N_sig_MC']/result_overview['N_wimp']
     print "\n2 different methods for limit estimation:"
     print '{0:15} | {1:15} | {2:10}'.format('method', '90% C.L. N_max','90% C.L. xs')
     print '-'*80
     print '{0:15} | {1:15.3f} | {2:15.2e}'.format('NLL curve', 
-                                                  result_overview['wimp events limit'], 
-                                                  result_overview['sigma limit'])
+                                                  result_overview['N_max'], 
+                                                  result_overview['xs_max'])
     print '{0:15} | {1:15.3f} | {2:15.2e}'.format('MC toy set fits', 
-                                                  result_overview['wimp events limit MC'], 
-                                                  result_overview['sigma limit MC'])
+                                                  result_overview['N_sig_MC'], 
+                                                  result_overview['xs_max_MC'])
 
 
 if SAVE_PLOTS:
