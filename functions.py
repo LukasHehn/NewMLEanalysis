@@ -11,6 +11,7 @@ import datetime as dt
 import calendar
 import numpy as np
 import couchdbkit
+import ROOT
 
 from couchdbkit import Server, Database
 from ROOT import TH1F, TH2F, TF1, TMath, TGraph
@@ -88,11 +89,18 @@ TRIGGER_EFFICIENCY.SetTitle('Trigger Efficiency;E_{Heat} (keV);Efficiency')
 
 
 # measured fiducial efficiency (division of neutron calibration data histogram with/without fiducial cut)
-FIDUCIAL_EFFICIENCY = TF1('fiducial_efficiency', '[2]*(1-exp([0]*(x-[1])))', 0, 25)
+def fiducial_efficiency_func(x, par):
+    xx =x[0]
+    if xx <= par[2]:
+        f = 0.
+    elif xx > par[2]:
+        f = par[0]*(1-TMath.exp(par[1]*(xx-par[2])))
+    return f
+FIDUCIAL_EFFICIENCY = TF1('fiducial_efficiency', fiducial_efficiency_func, 0, 25, 3)
 FIDUCIAL_EFFICIENCY.SetNpx(2500)
-FIDUCIAL_EFFICIENCY.SetParName(0, 'Slope')
-FIDUCIAL_EFFICIENCY.SetParName(1, 'Cut off')
-FIDUCIAL_EFFICIENCY.SetParName(2, 'Maximum')
+FIDUCIAL_EFFICIENCY.SetParName(0, 'Maximum')
+FIDUCIAL_EFFICIENCY.SetParName(1, 'Slope')
+FIDUCIAL_EFFICIENCY.SetParName(2, 'Cutoff')
 FIDUCIAL_EFFICIENCY.SetTitle('Fiducial Efficiency;E_{ion} (keV_{ee});Efficiency')
 
 
@@ -135,15 +143,15 @@ ER_CENTROID = RECOIL_ESTIMATOR.Clone('ER_CENTROID')
 ER_CENTROID.SetTitle('Electron Recoil Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
 
 
-#GAMMA_CUT = TF1('ER_CENTROID', 'x*(1+(0.16*x^0.18)*([0]/[1]))/(1+[0]/[1])-[4]*sqrt([2]**2+([3]*(1+(0.16*x^0.18)*([0]/3))/(1+([0]/3)))**2)', 0, 25)
-#GAMMA_CUT.SetNpx(2500)
-#GAMMA_CUT.SetParName(0, 'Voltage')
-#GAMMA_CUT.SetParName(1, 'Creation Potential')
-#GAMMA_CUT.FixParameter(1, 3.0)
-#GAMMA_CUT.SetParName(2, 'Sigma_Ion')
-#GAMMA_CUT.SetParName(3, 'Sigma_Rec')
-#GAMMA_CUT.SetParName(4, 'Gamma Cut')
-#GAMMA_CUT.SetTitle('Cut on ER Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
+GAMMA_CUT = TF1('gamma_cut', 'x*(1+(0.16*x^0.18)*([0]/[1]))/(1+[0]/[1])-[4]*sqrt([2]**2+([3]*(1+(0.16*x^0.18)*([0]/3))/(1+([0]/3)))**2)', 0, 25)
+GAMMA_CUT.SetNpx(2500)
+GAMMA_CUT.SetParName(0, 'Voltage')
+GAMMA_CUT.SetParName(1, 'Creation Potential')
+GAMMA_CUT.FixParameter(1, 3.0)
+GAMMA_CUT.SetParName(2, 'Sigma_Ion')
+GAMMA_CUT.SetParName(3, 'Sigma_Rec')
+GAMMA_CUT.SetParName(4, 'Gamma Cut')
+GAMMA_CUT.SetTitle('Cut on ER Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
 
 
 def fwhm_rec_from_heat(FWHM_heat, voltage, Erec):
@@ -233,7 +241,7 @@ def wimp_signal(WIMP_MASS, SIGMA_ION, SIGMA_REC,
     denom_i=1./(2*SIGMA_ION**2)
     denom_r=1./(2*SIGMA_REC**2)
     hist = TH2F('wimp_signal_%sGeV'%WIMP_MASS, 
-              'WIMP signal %sGeV;E_{rec} (keV_{nr});E_{ion} (keV_{ee});Rate (cts/kg*day)'%WIMP_MASS, 
+              'WIMP signal %2iGeV;E_{rec} (keV_{nr});E_{ion} (keV_{ee});Rate (cts/kg*day)'%WIMP_MASS, 
               rec_bins, rec_min, rec_max, ion_bins, ion_min, ion_max)
     for recbin in range(1, hist.GetNbinsX()+1):
         Erec = hist.GetXaxis().GetBinCenter(recbin)
@@ -273,26 +281,53 @@ def flat_gamma_bckgd(SIGMA_ION, SIGMA_REC, rec_bins=200, rec_min=0., rec_max=20.
     return hist
 
 
-def efficiency_ID3(E_thresh, SIGMA_REC):
-    hist = TH2F('efficiency', 'efficiency;E_{rec} (keVnr);E_{ion} (keVee);Efficiency', 
-                ENERGY_BINNING['rec']['Bins'], ENERGY_BINNING['rec']['Min'], ENERGY_BINNING['rec']['Max'], 
-                ENERGY_BINNING['ion']['Bins'], ENERGY_BINNING['ion']['Min'], ENERGY_BINNING['ion']['Max'])
-  
-    TRIGGER_EFFICIENCY.FixParameter(0, E_thresh)
-    TRIGGER_EFFICIENCY.FixParameter(1, SIGMA_REC)
-    FIDUCIAL_EFFICIENCY.FixParameter(0, -1.876)
-    FIDUCIAL_EFFICIENCY.FixParameter(1, 1.247)
-    FIDUCIAL_EFFICIENCY.FixParameter(2, 0.947)
-  
+def simple_efficiency(detector_name, e_thresh, sigma_rec, 
+                      rec_bins=200, rec_min=0., rec_max=20., ion_bins=100, ion_min=0., ion_max=10.):
+    hist = TH2F('total_efficiency', 'Total Efficiency;E_{rec} (keVnr);E_{ion} (keVee);Efficiency', 
+                rec_bins, rec_min, rec_max, ion_bins, ion_min, ion_max)
+    
+    trigger_eff = TF1('trigger_efficiency', '0.5*(1+ROOT::Math::erf(((x-[0])/([1]*sqrt(2)))))', rec_min, rec_max)
+    trigger_eff.FixParameter(0, e_thresh)
+    trigger_eff.FixParameter(1, sigma_rec)
+    
+    fiducial_eff = TF1('fiducial_efficiency', fiducial_efficiency_func, ion_min, ion_max, 3)
+    
+    trigger_eff.FixParameter(0, e_thresh)
+    trigger_eff.FixParameter(1, sigma_rec)
+    
+    if detector_name == 'ID2':
+        fiducial_eff.FixParameter(0, 0.99)
+        fiducial_eff.FixParameter(1, -1.73)
+        fiducial_eff.FixParameter(2, 1.74)
+    elif detector_name == 'ID3':
+        fiducial_eff.FixParameter(0, 0.947)
+        fiducial_eff.FixParameter(1, -1.876)
+        fiducial_eff.FixParameter(2, 1.247)
+    elif detector_name == 'ID6':
+        fiducial_eff.FixParameter(0, 0.96)
+        fiducial_eff.FixParameter(1, -1.23)
+        fiducial_eff.FixParameter(2, 1.43)
+    elif detector_name == 'ID401':
+        fiducial_eff.FixParameter(0, 0.97)
+        fiducial_eff.FixParameter(1, -2.386)
+        fiducial_eff.FixParameter(2, 1.394)
+    elif detector_name == 'ID404':
+        fiducial_eff.FixParameter(0, 0.97)
+        fiducial_eff.FixParameter(1, -6.34)
+        fiducial_eff.FixParameter(2, 1.90)
+    else:
+        print "Detector not implemented!"
+        return None
+    
     for recbin in range(1, hist.GetNbinsX()+1):
         Erec = hist.GetXaxis().GetBinCenter(recbin)
-        eff_trigger = TRIGGER_EFFICIENCY.Eval(Erec)
+        eff_rec = trigger_eff.Eval(Erec)
         for ionbin in range(1, hist.GetNbinsY()+1):
             Eion = hist.GetYaxis().GetBinCenter(ionbin)
-            eff_fiducial = FIDUCIAL_EFFICIENCY.Eval(Eion)
-      
-            if eff_trigger >= 0. and eff_fiducial >= 0.:
-                eff_total = eff_trigger * eff_fiducial
+            eff_ion = fiducial_eff.Eval(Eion)
+            
+            if eff_rec >= 0. and eff_ion >= 0.:
+                eff_total = eff_rec * eff_ion
             else:
                 eff_total = 0.
             hist.SetBinContent(recbin, ionbin, eff_total)
