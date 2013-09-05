@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from ROOT import *
-from Parameters import *
-from Functions import *
+from parameters import *
+from functions import *
 import numpy as np
 
 
