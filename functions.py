@@ -101,7 +101,7 @@ FIDUCIAL_EFFICIENCY.SetNpx(2500)
 FIDUCIAL_EFFICIENCY.SetParName(0, 'Maximum')
 FIDUCIAL_EFFICIENCY.SetParName(1, 'Slope')
 FIDUCIAL_EFFICIENCY.SetParName(2, 'Cutoff')
-FIDUCIAL_EFFICIENCY.SetTitle('Fiducial Efficiency;E_{ion} (keV_{ee});Efficiency')
+FIDUCIAL_EFFICIENCY.SetTitle('Fiducial Efficiency;E_{ion} (keVee);Efficiency')
 
 
 # Lindhard quenching relation (nuclear recoil)
@@ -120,7 +120,7 @@ RECOIL_ESTIMATOR.SetNpx(2500)
 RECOIL_ESTIMATOR.SetParName(0, 'Voltage')
 RECOIL_ESTIMATOR.SetParName(1, 'Creation Potential')
 RECOIL_ESTIMATOR.FixParameter(1, 3.0)
-RECOIL_ESTIMATOR.SetTitle('E_{Rec} estimator from E_{Heat};E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
+RECOIL_ESTIMATOR.SetTitle('E_{Rec} estimator from E_{Heat};E_{Rec} [keVnr];E_{Heat} [keVee]')
 
 
 # centroids of ER and NR band
@@ -131,16 +131,16 @@ def ER_CENTROID_REAL_FUNC(x, par):
 ER_CENTROID_REAL = TF1("ER_CENTROID_REAL", ER_CENTROID_REAL_FUNC, -5, 25, 1)
 ER_CENTROID_REAL.SetNpx(3000)
 ER_CENTROID_REAL.SetParameter(0, 6.4)
-ER_CENTROID_REAL.SetTitle('Electron Recoil Centroid (Real Part Only);E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
+ER_CENTROID_REAL.SetTitle('Electron Recoil Centroid (Real Part Only);E_{Rec} [keVnr];E_{Heat} [keVee]')
 
 
 NR_CENTROID = TF1('NR_CENTROID', '0.16*x^1.18', 0, 25)
 NR_CENTROID.SetNpx(2500)
-NR_CENTROID.SetTitle('Nuclear Recoil Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
+NR_CENTROID.SetTitle('Nuclear Recoil Centroid;E_{Rec} [keVnr];E_{Heat} [keVee]')
 
 
 ER_CENTROID = RECOIL_ESTIMATOR.Clone('ER_CENTROID')
-ER_CENTROID.SetTitle('Electron Recoil Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
+ER_CENTROID.SetTitle('Electron Recoil Centroid;E_{Rec} [keVnr];E_{Heat} [keVee]')
 
 
 GAMMA_CUT = TF1('gamma_cut', 'x*(1+(0.16*x^0.18)*([0]/[1]))/(1+[0]/[1])-[4]*sqrt([2]**2+([3]*(1+(0.16*x^0.18)*([0]/3))/(1+([0]/3)))**2)', 0, 25)
@@ -151,7 +151,7 @@ GAMMA_CUT.FixParameter(1, 3.0)
 GAMMA_CUT.SetParName(2, 'Sigma_Ion')
 GAMMA_CUT.SetParName(3, 'Sigma_Rec')
 GAMMA_CUT.SetParName(4, 'Gamma Cut')
-GAMMA_CUT.SetTitle('Cut on ER Centroid;E_{Rec} [keV_{nr}];E_{Heat} [keV_{ee}]')
+GAMMA_CUT.SetTitle('Cut on ER Centroid;E_{Rec} [keVnr];E_{Heat} [keVee]')
 
 
 def fwhm_rec_from_heat(FWHM_heat, voltage, Erec):
@@ -241,7 +241,7 @@ def wimp_signal(WIMP_MASS, SIGMA_ION, SIGMA_REC,
     denom_i=1./(2*SIGMA_ION**2)
     denom_r=1./(2*SIGMA_REC**2)
     hist = TH2F('wimp_signal_%sGeV'%WIMP_MASS, 
-              'WIMP signal %2iGeV;E_{rec} (keV_{nr});E_{ion} (keV_{ee});Rate (cts/kg*day)'%WIMP_MASS, 
+              'WIMP signal %2iGeV;E_{rec} (keVnr);E_{ion} (keVee);Rate (cts/kg*day)'%WIMP_MASS, 
               rec_bins, rec_min, rec_max, ion_bins, ion_min, ion_max)
     for recbin in range(1, hist.GetNbinsX()+1):
         Erec = hist.GetXaxis().GetBinCenter(recbin)

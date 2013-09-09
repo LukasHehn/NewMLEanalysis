@@ -20,7 +20,7 @@ DATA_FILE = '/kalinka/home/hehn/PhD/NewMLEanalysis/Data/ID3_eventlist_ion-rec-on
 E_ION_MAX = 14.
 E_REC_MAX = 25.
 WIMP_MASS = 8
-NUM_MC_SETS = 0  # number of MC toy event sets: 0 means no MC study
+NUM_MC_SETS = 1000  # number of MC toy event sets: 0 means no MC study
 SAVE_PLOTS = True
 
 
@@ -33,8 +33,8 @@ FWHM_REC = functions.fwhm_rec_from_heat(FWHM_HEAT, VOLTAGE, 10.)
 
 
 # Definition of maximum likelihood observables in RooFit
-ION = ROOT.RooRealVar('ion', 'E_{ion}', 0., E_ION_MAX, 'keV_{ee}')
-REC = ROOT.RooRealVar('rec', 'E_{rec}', 0., E_REC_MAX, 'keV_{nr}')
+ION = ROOT.RooRealVar('ion', 'E_{ion}', 0., E_ION_MAX, 'keVee')
+REC = ROOT.RooRealVar('rec', 'E_{rec}', 0., E_REC_MAX, 'keVnr')
 SIGMA_REC = ROOT.RooConstVar('sigma_rec', 'recoil energy resolution', FWHM_REC/2.35)
 SIGMA_ION = ROOT.RooConstVar('sigma_ion', 'ionization energy resolution', FWHM_ION/2.35)
 
@@ -53,7 +53,7 @@ total_efficiency_pdf = ROOT.RooHistPdf('total_efficiency_pdf', 'total_efficiency
 # Read in of data set and output as scatter/graph
 realdata = ROOT.RooDataSet.read(DATA_FILE, ROOT.RooArgList(REC, ION))
 realdata_scatter = realdata.createHistogram(REC, ION, int(E_REC_MAX*10), int(E_ION_MAX*10))
-#realdata_graph = functions.tgraph_from_dataset(realdata)  # tgraph not really more accurate than binned scatter
+realdata_graph = functions.tgraph_from_dataset(realdata)  # tgraph not really more accurate than binned scatter
 events = int(realdata.numEntries())
 
 
@@ -179,11 +179,6 @@ bckgd_and_sig_pdf = ROOT.RooAddPdf('bckgd_and_sig_pdf', 'bckgd_and_sig_pdf',
 bckgd_only_pdf = ROOT.RooAddPdf('bckgd_only_pdf', 'bckgd_only_pdf', 
                                 ROOT.RooArgList(flat_ext, V49_ext, Cr51_ext, Mn54_ext, Fe55_ext, Zn65_ext, Ga68_ext, Ge68_ext))  #  , Co57_ext
 
-bckgd_and_sig_hist = bckgd_and_sig_pdf.createHistogram('bckgd_and_sig_hist', REC, rf.Binning(int(E_REC_MAX*10)), 
-                                       rf.YVar(ION, rf.Binning(int(E_ION_MAX*10)))
-                                       )
-bckgd_and_sig_hist.SetTitle('ID3 WIMP search data + best fit PDF')
-
 
 # Create negative log likelihood (NLL) object manually and minimize it
 nll = ROOT.RooNLLVar('nll', 'nll', bckgd_and_sig_pdf, realdata, rf.Extended(ROOT.kTRUE), 
@@ -196,6 +191,14 @@ FitResult = minuit.save('realfit', 'fit to real data')
 FitParams = FitResult.floatParsFinal()
 NumFitParams = FitParams.getSize()
 FitResult.Print('v')
+
+
+# Create histogram of best fit PDF
+bckgd_and_sig_hist = bckgd_and_sig_pdf.createHistogram('bckgd_and_sig_hist', REC, rf.Binning(int(E_REC_MAX*10)), 
+                                       rf.YVar(ION, rf.Binning(int(E_ION_MAX*10)))
+                                       )
+bckgd_and_sig_hist.SetTitle('{detector} best fit PDF Bckgd + {mass}GeV Signal'.format(detector=DETECTOR_NAME, mass=WIMP_MASS))
+bckgd_and_sig_hist.SetStats(0)
 
 
 # Calculate cross section limit from fit results and output of results
@@ -214,22 +217,20 @@ result_overview = {'N_sig' : N_sig, 'N_max' : N_max, 'rate' : rate, 'xs_max' : x
 print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10}'.format('WIMP_MASS', 'Rate', 'N_signal', 
                                                                 'ErrorLow', 'ErrorHigh', 'XS-limit [pb]')
 print '-'*80
-print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10}'.format(WIMP_MASS, rate, N_sig, 
+print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10} ({5:.1e})'.format(WIMP_MASS, rate, N_sig, 
                                                                 sigma_n_sig_low, sigma_n_sig_high, xs_max)
 
 
 # Definition of RooFit projections over both energies starting with appropriate binning
-recbins = int(E_REC_MAX*2)
-ionbins = int(E_ION_MAX*5)
+recbins = int(E_REC_MAX*5)
+ionbins = int(E_ION_MAX*10)
 
 ionframe = ION.frame()
-ionframe.SetTitle('Projection in E_{ion}')
+ionframe.SetTitle('PDF component projection in E_{ion}')
 realdata.plotOn(ionframe, rf.Name('data'), 
                 rf.Binning(ionbins), rf.MarkerSize(1.0))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("flat_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
-                 rf.LineColor(ROOT.kGreen), rf.LineWidth(2))
-bckgd_and_sig_pdf.plotOn(ionframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
-                 rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
+                 rf.LineColor(ROOT.kGreen), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("V49_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Cr51_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
@@ -238,27 +239,27 @@ bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Mn54_ext"), rf.Normalization(1
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Fe55_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Co57_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+#bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Co57_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+                 #rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Zn65_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-#bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ge68_ion_pdf"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
-                 #rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ge68_ion_pdf"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ga68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("sig_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))
 bckgd_and_sig_pdf.paramOn(ionframe, rf.Format('NEU', rf.AutoPrecision(2)), 
                   rf.Layout(0.1, 0.55, 0.9), rf.ShowConstants(ROOT.kFALSE))
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+                 rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
 
 recframe = REC.frame()
-recframe.SetTitle('Projection in E_{rec}')
+recframe.SetTitle('PDF component projection in E_{rec}')
 realdata.plotOn(recframe, rf.Name("data"), 
                 rf.Binning(recbins), rf.MarkerColor(ROOT.kBlack), rf.MarkerSize(1.0))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("flat_gamma_bckgd_pdf"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kGreen), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
-bckgd_and_sig_pdf.plotOn(recframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
-                 rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("V49_rec_pdf"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Cr51_rec_pdf"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
@@ -267,16 +268,35 @@ bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Mn54_rec_pdf"), rf.Normalizati
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Fe55_rec_pdf"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Co57_rec_pdf"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+#bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Co57_rec_pdf"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+                 #rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Zn65_rec_pdf"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-#bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ge68_rec_pdf"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
-                 #rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ge68_rec_pdf"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ga68_rec_pdf"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("signal_pdf"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))
+bckgd_and_sig_pdf.plotOn(recframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+                 rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
+
+
+# Definition of some vertical lines which are used to mark parameter fit-value positions
+nll_line = ROOT.TLine()
+nll_line.SetLineWidth(2)
+nll_line.SetLineStyle(7)
+nll_line.SetLineColor(ROOT.kBlue)
+
+zeroline = ROOT.TLine()
+zeroline.SetLineWidth(2)
+zeroline.SetLineStyle(7)
+zeroline.SetLineColor(ROOT.kBlack)
+
+paramline = ROOT.TLine()
+paramline.SetLineWidth(2)
+paramline.SetLineStyle(1)
+paramline.SetLineColor(ROOT.kBlue)
 
 
 # Plotting of fit results (PDFs and projected spectra)
@@ -284,25 +304,26 @@ c1 = ROOT.TCanvas('c1', 'Fit result overview for %i GeV'%WIMP_MASS, 1000, 750)
 c1.Divide(2, 2)
 c1.cd(1)
 c1.cd(1).SetLogz()
-bckgd_and_sig_hist.Draw('COL')
-bckgd_and_sig_hist.SetStats(0)
-signal_hist.Draw('CONT2')
-realdata_scatter.SetMarkerColor(ROOT.kBlack)
-realdata_scatter.SetMarkerStyle(ROOT.kFullDotLarge)
-realdata_scatter.Draw('SAMESP')
+bckgd_and_sig_hist.Draw('COLZ')
+realdata_graph.SetMarkerColor(ROOT.kBlack)
+realdata_graph.SetMarkerStyle(ROOT.kPlus)
+realdata_graph.Draw('SAMESP')
 functions.ER_CENTROID.SetLineColor(ROOT.kBlack)
-functions.ER_CENTROID.SetLineWidth(1)
+functions.ER_CENTROID.SetLineWidth(2)
 functions.ER_CENTROID.DrawCopy('SAME')
 functions.NR_CENTROID.SetLineColor(ROOT.kBlack)
-functions.NR_CENTROID.SetLineWidth(1)
+functions.NR_CENTROID.SetLineWidth(2)
 functions.NR_CENTROID.DrawCopy('SAME')
 c1.cd(3)
-signal_hist.Draw('CONT0')
-signal_hist.SetStats(0)
-signal_hist.SetContour(30)
-realdata_scatter.Draw('SAMESP')
-functions.ER_CENTROID.DrawCopy('SAME')
-functions.NR_CENTROID.DrawCopy('SAME')
+NsigFit = FitResult.floatParsFinal().find('N_signal')
+signalNLLframe = NsigFit.frame()
+signalNLLframe.SetTitle('Negative Log-Likelihood for N_signal')
+nll.plotOn(signalNLLframe, rf.Precision(1e-5), rf.ShiftToZero())
+signalNLLframe.Draw()
+ROOT.gPad.Update()
+paramline.DrawLine(NsigFit.getVal(), ROOT.gPad.GetUymin(), NsigFit.getVal(), ROOT.gPad.GetUymax())
+paramline.SetLineColor(ROOT.kMagenta)
+paramline.SetLineWidth(3)
 c1.cd(2)
 ionframe.Draw()
 c1.cd(4)
@@ -323,25 +344,12 @@ if NUM_MC_SETS:
     c2 = ROOT.TCanvas('c2', 'Fit + MC toy set statistics for %i GeV'%WIMP_MASS)
     c2.Divide(1, NumFitParams, 0.001, 0.001)
 
-    nll_line = ROOT.TLine()
-    nll_line.SetLineWidth(2)
-    nll_line.SetLineStyle(7)
-    nll_line.SetLineColor(ROOT.kBlue)
-
-    zeroline = ROOT.TLine()
-    zeroline.SetLineWidth(2)
-    zeroline.SetLineStyle(7)
-    zeroline.SetLineColor(ROOT.kBlack)
-
     for i in range(NumFitParams):
         parameter = FitParams[i]
         paramname = parameter.GetName()
         paramvalue = parameter.getVal()
+        paramline.SetLineColor(ROOT.kRed)
 
-        paramline = ROOT.TLine()
-        paramline.SetLineWidth(2)
-        paramline.SetLineStyle(1)
-        paramline.SetLineColor(ROOT.kBlue)
         ParamLineList.append(paramline)
 
         pad = c2.cd(i+1)
@@ -393,10 +401,9 @@ if NUM_MC_SETS and WIMP_MASS:
     ParamNLLFrame.Draw()
     ROOT.gPad.Update()
     paramline.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
-    zeroline.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
 
     c3.cd(2)
-    ParamDistriFrame = MC_study.plotParam(parameter, rf.FrameBins(1000))  #, rf.FrameRange(0., 10.))
+    ParamDistriFrame = MC_study.plotParam(parameter)  #, rf.FrameRange(0., 10.))
     ParamDistriFrame.SetTitle('MC distri '+paramname)
     ParamDistriFrame.Draw()
     ParamDistriFrame.getHist().Fit('gaus', 'QEM')
