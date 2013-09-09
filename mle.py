@@ -189,7 +189,6 @@ minuit.hesse()  # find symmetric errors
 minuit.minos()  # find asymmetric errors
 FitResult = minuit.save('realfit', 'fit to real data')
 FitParams = FitResult.floatParsFinal()
-NumFitParams = FitParams.getSize()
 FitResult.Print('v')
 
 
@@ -282,151 +281,148 @@ bckgd_and_sig_pdf.plotOn(recframe, rf.Normalization(1.0,ROOT.RooAbsReal.Relative
                  rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
 
 
+# NLL frame for N_signal parameter
+NsigFit = FitResult.floatParsFinal().find('N_signal')
+signalNLLframe = NsigFit.frame()
+signalNLLframe.SetTitle('Negative Log-Likelihood for N_signal')
+nll.plotOn(signalNLLframe, rf.Precision(1e-5), rf.ShiftToZero())
+signalNLLframe.GetXaxis().SetTitle('N_signal')
+
+
 # Definition of some vertical lines which are used to mark parameter fit-value positions
-nll_line = ROOT.TLine()
-nll_line.SetLineWidth(2)
-nll_line.SetLineStyle(7)
-nll_line.SetLineColor(ROOT.kBlue)
+NllLine = ROOT.TLine()
+NllLine.SetLineWidth(2)
+NllLine.SetLineStyle(1)
+NllLine.SetLineColor(ROOT.kBlue)
 
-zeroline = ROOT.TLine()
-zeroline.SetLineWidth(2)
-zeroline.SetLineStyle(7)
-zeroline.SetLineColor(ROOT.kBlack)
+ZeroLine = ROOT.TLine()
+ZeroLine.SetLineWidth(2)
+ZeroLine.SetLineStyle(7)
+ZeroLine.SetLineColor(ROOT.kBlack)
 
-paramline = ROOT.TLine()
-paramline.SetLineWidth(2)
-paramline.SetLineStyle(1)
-paramline.SetLineColor(ROOT.kBlue)
+ParamLine = ROOT.TLine()
+ParamLine.SetLineWidth(2)
+ParamLine.SetLineStyle(1)
+ParamLine.SetLineColor(ROOT.kMagenta)
+
+ERline = functions.ER_CENTROID
+ERline.SetLineColor(ROOT.kBlack)
+ERline.SetLineWidth(2)
+NRline = functions.NR_CENTROID
+NRline.SetLineColor(ROOT.kBlack)
+NRline.SetLineWidth(2)
 
 
-# Plotting of fit results (PDFs and projected spectra)
+# Plotting of fit results (best fit pdf + data, projections in both energies, NLL function)
 c1 = ROOT.TCanvas('c1', 'Fit result overview for %i GeV'%WIMP_MASS, 1000, 750)
 c1.Divide(2, 2)
+
 c1.cd(1)
 c1.cd(1).SetLogz()
 bckgd_and_sig_hist.Draw('COLZ')
 realdata_graph.SetMarkerColor(ROOT.kBlack)
 realdata_graph.SetMarkerStyle(ROOT.kPlus)
 realdata_graph.Draw('SAMESP')
-functions.ER_CENTROID.SetLineColor(ROOT.kBlack)
-functions.ER_CENTROID.SetLineWidth(2)
-functions.ER_CENTROID.DrawCopy('SAME')
-functions.NR_CENTROID.SetLineColor(ROOT.kBlack)
-functions.NR_CENTROID.SetLineWidth(2)
-functions.NR_CENTROID.DrawCopy('SAME')
+ERline.DrawCopy('SAME')
+NRline.DrawCopy('SAME')
 c1.cd(3)
-NsigFit = FitResult.floatParsFinal().find('N_signal')
-signalNLLframe = NsigFit.frame()
-signalNLLframe.SetTitle('Negative Log-Likelihood for N_signal')
-nll.plotOn(signalNLLframe, rf.Precision(1e-5), rf.ShiftToZero())
 signalNLLframe.Draw()
 ROOT.gPad.Update()
-paramline.DrawLine(NsigFit.getVal(), ROOT.gPad.GetUymin(), NsigFit.getVal(), ROOT.gPad.GetUymax())
-paramline.SetLineColor(ROOT.kMagenta)
-paramline.SetLineWidth(3)
+ParamLine.DrawLine(NsigFit.getVal(), ROOT.gPad.GetUymin(), NsigFit.getVal(), ROOT.gPad.GetUymax())
+ParamLine.SetLineWidth(3)
+
 c1.cd(2)
 ionframe.Draw()
+
 c1.cd(4)
 recframe.Draw()
 
 
-# Creation of Monte Carlo toy event sets and output
+# Monte Carlo toy event sets and output
 if NUM_MC_SETS:
+    # Creation of Monte Carlo toy event sets with extended option
     MC_study = ROOT.RooMCStudy(bckgd_and_sig_pdf, ROOT.RooArgSet(REC, ION), rf.Silence(), 
-                               rf.Extended(ROOT.kTRUE), rf.FitOptions(rf.Save(ROOT.kTRUE)))  # , rf.FitModel(bckgd_and_sig_pdf)
+                              rf.Extended(ROOT.kTRUE), rf.FitOptions(rf.Save(ROOT.kTRUE)))  # , rf.FitModel(bckgd_and_sig_pdf)
     MC_study.generateAndFit(NUM_MC_SETS)
-
-    ParamNLLFrameList = []
-    ParamDistriFrameList = []
-    ParamPullFrameList = []
-    ParamLineList = []
-
-    c2 = ROOT.TCanvas('c2', 'Fit + MC toy set statistics for %i GeV'%WIMP_MASS)
+    
+    
+    # plot results of the Monte Carlo toy set fit for all parameters
+    c2 = ROOT.TCanvas('c2', 'MC toy set statistics for {mass} GeV'.format(mass=WIMP_MASS))
+    NumFitParams = FitParams.getSize()
     c2.Divide(1, NumFitParams, 0.001, 0.001)
-
+    
+    ParamLine.SetLineColor(ROOT.kRed)
+    
     for i in range(NumFitParams):
         parameter = FitParams[i]
         paramname = parameter.GetName()
         paramvalue = parameter.getVal()
-        paramline.SetLineColor(ROOT.kRed)
-
-        ParamLineList.append(paramline)
-
+        
         pad = c2.cd(i+1)
         pad.Divide(3, 1, 0.001, 0.001)
-
-        ParamNLLFrame = parameter.frame()
-        ParamNLLFrame.SetTitle('NLL fit '+paramname)
-        nll.plotOn(ParamNLLFrame, rf.Precision(1e-5), rf.ShiftToZero())
-        ParamNLLFrameList.append(ParamNLLFrame)
+        
         pad.cd(1)
+        ParamNLLFrame = parameter.frame()
+        #ParamNLLFrame.SetTitle('NLL fit {name}'.format(name=paramname))
+        nll.plotOn(ParamNLLFrame, rf.Precision(1e-5), rf.ShiftToZero())
+        ParamNLLFrame.SetMinimum(0.)
+        ParamNLLFrame.SetMaximum(100.)
         ParamNLLFrame.Draw()
         ROOT.gPad.Update()
-        paramline.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
-
-        ParamDistriFrame = MC_study.plotParam(parameter)
-        ParamDistriFrame.SetTitle('MC distri '+paramname)
-        ParamDistriFrameList.append(ParamDistriFrame)
+        ParamLine.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
+        
         pad.cd(2)
+        ParamDistriFrame = MC_study.plotParam(parameter)
+        #ParamDistriFrame.SetTitle('MC distri {name}'.format(name=paramname))
         ParamDistriFrame.Draw()
-        ParamDistriFrame.getHist().Fit('gaus', 'QEM')
+        #ParamDistriFrame.getHist().Fit('gaus', 'QEM')
         ROOT.gPad.Update()
-        paramline.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
-
-        ParamPullFrame = MC_study.plotPull(parameter, rf.FitGauss())
-        ParamPullFrame.SetTitle('MC pull distri '+paramname)
-        ParamPullFrameList.append(ParamPullFrame)
+        ParamLine.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
+        
         pad.cd(3)
+        ParamPullFrame = MC_study.plotPull(parameter, rf.FitGauss())
+        #ParamPullFrame.SetTitle('MC pull distri {name}'.format(name=paramname))
         ParamPullFrame.Draw()
         ROOT.gPad.Update()
-        zeroline.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
-
+        ZeroLine.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
+        
     c2.SetCanvasSize(1200, 2400)
-
-
-# Extra canvas for signal parameters only (including MC toy event set fits)
-if NUM_MC_SETS and WIMP_MASS:
-    parameter = FitResult.floatParsFinal().find('N_signal')
-    paramname = parameter.GetName()
-    paramvalue = parameter.getVal()
-
-    nllvalue = nll.getVal()
-
-    c3 = ROOT.TCanvas('c3', 'N_signal fit & MC toy set statistics for %i GeV'%WIMP_MASS, 1000, 750)
-    c3.Divide(2, 2)
-    c3.cd(1)
-    ParamNLLFrame = parameter.frame()
-    ParamNLLFrame.SetTitle('NLL fit '+paramname)
-    nll.plotOn(ParamNLLFrame, rf.Precision(1e-5), rf.ShiftToZero())
-    ParamNLLFrame.Draw()
-    ROOT.gPad.Update()
-    paramline.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
-
-    c3.cd(2)
-    ParamDistriFrame = MC_study.plotParam(parameter)  #, rf.FrameRange(0., 10.))
-    ParamDistriFrame.SetTitle('MC distri '+paramname)
-    ParamDistriFrame.Draw()
-    ParamDistriFrame.getHist().Fit('gaus', 'QEM')
-    ROOT.gPad.Update()
-    paramline.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
-    zeroline.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
-
-    c3.cd(3)
-    ParamPullFrame = MC_study.plotPull(parameter, rf.FitGauss(ROOT.kTRUE))  # , rf.FrameBins(100), rf.FrameRange(-5, 5)
-    ParamPullFrame.SetTitle('MC pull distri '+paramname)
-    ParamPullFrame.Draw()
-    ROOT.gPad.Update()
-    zeroline.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
-
-    c3.cd(4)
+    
+    
+    # Additional canvas with distribution of NLL values for all toy set fits
+    RealDataBestFitNLL = nll.getVal()
+    c3 = ROOT.TCanvas('c3', 'NLL distribution for Monte Carlo toy sets {mass}GeV'.format(mass=WIMP_MASS), 800, 600)
     MCnllframe = MC_study.plotNLL()
-    MCnllframe.SetTitle('NLL distri')
+    MCnllframe.SetTitle('NLL distribution for {mass}GeV'.format(mass=WIMP_MASS))
     MCnllframe.Draw()
     MCnllframe.getHist().Fit('gaus', 'QEM')
     ROOT.gPad.Update()
-    nll_line.SetLineStyle(1)
-    nll_line.DrawLine(nllvalue, ROOT.gPad.GetUymin(), nllvalue, ROOT.gPad.GetUymax())
-    paramline.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
+    NllLine.DrawLine(RealDataBestFitNLL, ROOT.gPad.GetUymin(), RealDataBestFitNLL, ROOT.gPad.GetUymax())
+
+
+# Canvas for signal parameters only (including MC toy event set fits)
+if NUM_MC_SETS:
+    signal = FitResult.floatParsFinal().find('N_signal')
+    signalvalue = signal.getVal()
+    
+    c4 = ROOT.TCanvas('c4', 'N_signal fit & MC toy set statistics for {mass} GeV'.format(mass=WIMP_MASS), 1000, 500)
+    c4.Divide(2)
+    
+    c4.cd(1)
+    ParamDistriFrame = MC_study.plotParam(signal)
+    ParamDistriFrame.SetTitle('MC toy set fits')
+    ParamDistriFrame.Draw()
+    ParamDistriFrame.getHist().Fit('gaus', 'QEM')
+    ROOT.gPad.Update()
+    ParamLine.SetLineColor(ROOT.kMagenta)
+    ParamLine.DrawLine(signalvalue, ROOT.gPad.GetUymin(), signalvalue, ROOT.gPad.GetUymax())
+    
+    c4.cd(2)
+    ParamPullFrame = MC_study.plotPull(signal)  #rf.FitGauss(ROOT.kTRUE) not really useful because of non-gaussian features
+    ParamPullFrame.SetTitle('MC toy set fits pull')
+    ParamPullFrame.Draw()
+    ROOT.gPad.Update()
+    ZeroLine.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
 
 
 # Alternative calculation of 90% C.L. limit on cross section using Monte Carlo statistics
