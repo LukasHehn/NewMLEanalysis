@@ -8,6 +8,7 @@
 ######################################################
 
 import functions
+import parameters
 import ROOT
 
 from parameters import BASELINE_CUTS_ERIC
@@ -15,18 +16,23 @@ from ROOT import TGraph, gROOT, TCanvas, KDataReader
 
 
 # Definition of parameters used for skimming event set
-DETECTOR_NAME = 'ID3'
-KDataFile = 'Data/Run12_ID3_bckg_with_subrecords.root'
+DETECTOR_NAME = 'ID6'
+#KDataFile = 'Data/Run12_ID3_bckg_with_subrecords.root'
+KDataFile = 'Data/Run12_ID3+6+401+404_bckg_with_subrecords.root'
 OutFileName = False  # 'Data/ID3_eventlist_lowE_corrected.txt'
+ENERGY_CORRECTION = False
+
 E_ION_MAX = 14.
 E_REC_MAX = 25.
 IonFactor = 1.0/1.029
 HeatFactor = 1.0/1.017
+
 VOLTAGE = 6.4
 E_THRESH = 3.874
-FWHM_HEAT = 0.82
-FWHM_ION = 0.72
+FWHM_HEAT = parameters.ENERGY_RESOLUTIONS_ERIC[DETECTOR_NAME]['Heat']
+FWHM_ION = parameters.ENERGY_RESOLUTIONS_ERIC[DETECTOR_NAME]['Fiducial']
 FWHM_REC = functions.fwhm_rec_from_heat(FWHM_HEAT, VOLTAGE, 10)
+
 GAMMA_CUT = 1.96  # gamma cut from ER centroid in standard deviations
 WIMP_MASS = 8  # if wimp mass set, show also signal density of wimp signal
 
@@ -60,7 +66,7 @@ for entry in range(entries):
 
         # Bolometer records
         bolo = event.GetBolo(bolonum)
-        if IonFactor and HeatFactor:
+        if ENERGY_CORRECTION:
             EnergyIon = IonFactor*bolo.GetEnergyIonFiducial()
             EnergyHeat = HeatFactor*bolo.GetEnergyHeat(1)
         else:
@@ -176,6 +182,7 @@ if WIMP_MASS:
     bckgd_plus_sig = gamma_bckgd.Clone('bckgd_plus_sig')
     bckgd_plus_sig.Add(signal)
     bckgd_plus_sig.SetStats(0)
+    bckgd_plus_sig.SetContour(30)
     print "Combined flat gamma background and WIMP signal both normalized to maximum of 1."
 
 
