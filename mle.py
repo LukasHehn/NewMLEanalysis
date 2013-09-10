@@ -19,11 +19,11 @@ DETECTOR_NAME = 'ID3'
 DATA_FILE = '/kalinka/home/hehn/PhD/NewMLEanalysis/Data/ID3_eventlist_ion-rec-only.txt'
 E_ION_MAX = 14.
 E_REC_MAX = 25.
-WIMP_MASS = 10
+WIMP_MASS = 8
 NUM_MC_SETS = 1000  # number of MC toy event sets: 0 means no MC study
-SAVE_PLOTS = True
+SAVE_PLOTS = False
 ENERGY_SCALING = True
-BCKGD_MC = True
+BCKGD_MC = False
 
 
 # Detector specific parameters like resolutions
@@ -258,9 +258,6 @@ bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("sig_ext"), rf.Normalization(10
                  rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
-# Additional box with parameter fit values
-bckgd_and_sig_pdf.paramOn(ionframe, rf.Format('NEU', rf.AutoPrecision(2)), 
-                  rf.Layout(0.1, 0.55, 0.9), rf.ShowConstants(ROOT.kFALSE))
 
 
 recframe = REC.frame()
@@ -289,6 +286,9 @@ bckgd_and_sig_pdf.plotOn(recframe, rf.Components("sig_ext"), rf.Normalization(10
                  rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
+# Additional box with parameter fit values
+bckgd_and_sig_pdf.paramOn(recframe, rf.Format('NEU', rf.AutoPrecision(2)), 
+                  rf.Layout(0.1, 0.50, 0.9), rf.ShowConstants(ROOT.kFALSE))
 
 
 # NLL frame for N_signal parameter
@@ -349,6 +349,7 @@ ionframe.Draw()
 c1.cd(4)
 recframe.Draw()
 
+N_signal.setVal(0.1)
 
 # Monte Carlo toy event sets and output
 if NUM_MC_SETS:
@@ -436,12 +437,12 @@ if NUM_MC_SETS:
     ParamLine.SetLineColor(ROOT.kMagenta)
     ParamLine.DrawLine(signalvalue, ROOT.gPad.GetUymin(), signalvalue, ROOT.gPad.GetUymax())
     
-    c4.cd(2)
-    ParamPullFrame = MC_study.plotPull(signal)  #rf.FitGauss(ROOT.kTRUE) not really useful because of non-gaussian features
-    ParamPullFrame.SetTitle('MC toy set fits pull')
-    ParamPullFrame.Draw()
-    ROOT.gPad.Update()
-    ZeroLine.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
+    #c4.cd(2)
+    #ParamPullFrame = MC_study.plotPull(signal)  #rf.FitGauss(ROOT.kTRUE) not really useful because of non-gaussian features
+    #ParamPullFrame.SetTitle('MC toy set fits pull')
+    #ParamPullFrame.Draw()
+    #ROOT.gPad.Update()
+    #ZeroLine.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
 
 
 # Alternative calculation of 90% C.L. limit on cross section using Monte Carlo statistics
