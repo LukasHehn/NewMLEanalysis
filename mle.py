@@ -20,8 +20,10 @@ DATA_FILE = '/kalinka/home/hehn/PhD/NewMLEanalysis/Data/ID3_eventlist_ion-rec-on
 E_ION_MAX = 14.
 E_REC_MAX = 25.
 WIMP_MASS = 10
-NUM_MC_SETS = 0  # number of MC toy event sets: 0 means no MC study
+NUM_MC_SETS = 1000  # number of MC toy event sets: 0 means no MC study
 SAVE_PLOTS = True
+ENERGY_SCALING = True
+BCKGD_MC = True
 
 
 # Detector specific parameters like resolutions
@@ -64,7 +66,7 @@ functions.ER_CENTROID.FixParameter(0, VOLTAGE)
 # Scaling factors allow for correction of gamma peak energy positions.
 ion_scaling = ROOT.RooRealVar('ion_scaling', 'scaling factor ionization energy', 1.0, 0.95, 1.05)
 rec_scaling = ROOT.RooRealVar('rec_scaling', 'scaling factor recoil energy', 1.0, 0.95, 1.05)
-if SCALING:
+if not ENERGY_SCALING:
     ion_scaling.setConstant(ROOT.kTRUE)
     rec_scaling.setConstant(ROOT.kTRUE)
 
@@ -192,7 +194,7 @@ nll = ROOT.RooNLLVar('nll', 'nll', bckgd_and_sig_pdf, realdata, rf.Extended(ROOT
 minuit = ROOT.RooMinuit(nll)
 minuit.migrad()  # find minimum
 minuit.hesse()  # find symmetric errors
-minuit.minos()  # find asymmetric errors
+minuit.minos()  # find Asymmetric errors
 FitResult = minuit.save('realfit', 'fit to real data')
 FitParams = FitResult.floatParsFinal()
 FitResult.Print('v')
@@ -215,7 +217,7 @@ N_max = N_sig + 1.28 * sigma_n_sig_high
 livetime = 197.  # ID3 livetime after cuts in days
 mass = 0.160  # ID3 detector mass in kg
 rate = signal_hist.Integral('WIDTH')  # option width absolutely necessary
-N_wimp = rate * livetime * mass * 1e6
+N_wimp = rate * livetime * mass * 1e6  # 1e6 factor to scale to pb
 xs_max = N_max / N_wimp
 result_overview = {'N_sig' : N_sig, 'N_max' : N_max, 'rate' : rate, 'xs_max' : xs_max, 'N_wimp' : N_wimp}
 
@@ -350,9 +352,16 @@ recframe.Draw()
 
 # Monte Carlo toy event sets and output
 if NUM_MC_SETS:
-    # Creation of Monte Carlo toy event sets with extended option
-    MC_study = ROOT.RooMCStudy(bckgd_only_pdf, ROOT.RooArgSet(REC, ION), rf.FitModel(bckgd_and_sig_pdf), rf.Silence(), 
-                              rf.Extended(ROOT.kTRUE), rf.FitOptions(rf.Save(ROOT.kTRUE)))  # , rf.FitModel(bckgd_and_sig_pdf)
+    # Creation of Monte Carlo toy event sets from bckgd only for theoretical limits
+    if BCKGD_MC:
+        MC_study = ROOT.RooMCStudy(bckgd_only_pdf, ROOT.RooArgSet(REC, ION), rf.Silence(), 
+                                   rf.Extended(ROOT.kTRUE), rf.FitOptions(rf.Save(ROOT.kTRUE)), 
+                                   rf.FitModel(bckgd_and_sig_pdf)
+                                   )
+    else:
+        MC_study = ROOT.RooMCStudy(bckgd_and_sig_pdf, ROOT.RooArgSet(REC, ION), rf.Silence(), 
+                                   rf.Extended(ROOT.kTRUE), rf.FitOptions(rf.Save(ROOT.kTRUE)), 
+                                   )
     MC_study.generateAndFit(NUM_MC_SETS)
     
     
