@@ -227,8 +227,8 @@ print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10} ({5:.1e})'.format(WIMP_M
 
 
 # Definition of RooFit projections over both energies starting with appropriate binning
-recbins = int(E_REC_MAX*5)
-ionbins = int(E_ION_MAX*10)
+recbins = int(E_REC_MAX*4)
+ionbins = int(E_ION_MAX*4)
 
 ionframe = ION.frame()
 ionframe.SetTitle('PDF component projection in E_{ion}')
@@ -252,12 +252,14 @@ bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ge68_ext"), rf.Normalization(1
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ga68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("sig_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("sig_ext"), rf.Normalization(100.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))
-bckgd_and_sig_pdf.paramOn(ionframe, rf.Format('NEU', rf.AutoPrecision(2)), 
-                  rf.Layout(0.1, 0.55, 0.9), rf.ShowConstants(ROOT.kFALSE))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
+# Additional box with parameter fit values
+bckgd_and_sig_pdf.paramOn(ionframe, rf.Format('NEU', rf.AutoPrecision(2)), 
+                  rf.Layout(0.1, 0.55, 0.9), rf.ShowConstants(ROOT.kFALSE))
+
 
 recframe = REC.frame()
 recframe.SetTitle('PDF component projection in E_{rec}')
@@ -281,7 +283,7 @@ bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ge68_ext"), rf.Normalization(1
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ga68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(recframe, rf.Components("sig_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("sig_ext"), rf.Normalization(100.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
                  rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
@@ -320,7 +322,7 @@ NRline.SetLineWidth(2)
 
 
 # Plotting of fit results (best fit pdf + data, projections in both energies, NLL function)
-c1 = ROOT.TCanvas('c1', 'Fit result overview for %i GeV'%WIMP_MASS, 1000, 750)
+c1 = ROOT.TCanvas('c1', 'Fit result overview for %i GeV'%WIMP_MASS, 1200, 900)
 c1.Divide(2, 2)
 
 c1.cd(1)
@@ -333,6 +335,8 @@ ERline.DrawCopy('SAME')
 NRline.DrawCopy('SAME')
 c1.cd(3)
 signalNLLframe.Draw()
+signalNLLframe.SetMinimum(0.)
+signalNLLframe.SetMaximum(6.)
 ROOT.gPad.Update()
 ParamLine.DrawLine(NsigFit.getVal(), ROOT.gPad.GetUymin(), NsigFit.getVal(), ROOT.gPad.GetUymax())
 ParamLine.SetLineWidth(3)
