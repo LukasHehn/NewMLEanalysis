@@ -1,37 +1,47 @@
 #!/usr/bin/env python
 
 ####################################################################################################
-#
-# Calculation of 90% C.L. cross section limits using Maximum Likelihood methods based on RooFit
-# Lukas Hehn, 2013
-#
+##
+## Calculation of 90% C.L. cross section limits using Maximum Likelihood methods based on RooFit
+## Lukas Hehn, 2013
+##
 ####################################################################################################
 
 import ROOT
 import functions
+import parameters
 from ROOT import RooFit as rf
 
 
 
 # Global variables used in the script
 DETECTOR_NAME = 'ID3'
-#DATA_FILE = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
-DATA_FILE = '/kalinka/home/hehn/PhD/NewMLEanalysis/Data/ID3_eventlist_ion-rec-only.txt'
-E_ION_MAX = 14.
-E_REC_MAX = 25.
+
+DATA_FILE = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
+#DATA_FILE = '/kalinka/home/hehn/PhD/NewMLEanalysis/Data/ID3_eventlist_ion-rec-only.txt'
+
+E_ION_MAX = 10.
+E_REC_MAX = 20.
+BINSIZE = 0.1
+
 WIMP_MASS = 8
 NUM_MC_SETS = 1000  # number of MC toy event sets: 0 means no MC study
-SAVE_PLOTS = False
-ENERGY_SCALING = True
-BCKGD_MC = False
 
+# Flags to control procedures
+ENERGY_SCALING = False
+BCKGD_MC = False
+SAVE_PLOTS = False
 
 # Detector specific parameters like resolutions
-VOLTAGE = 6.4
+VOLTAGE = parameters.AVG_VOLTAGES_ERIC[DETECTOR_NAME]  # 6.4 volt during whole Run 12 for ID3
 E_THRESH = 3.874
-FWHM_HEAT = 0.82  # value for ID3 adopted from Eric for 10keV
-FWHM_ION = 0.72  # value for ID3 adopted from Eric for 10keV
+FWHM_HEAT = parameters.ENERGY_RESOLUTIONS_ERIC[DETECTOR_NAME]['Heat']  # 0.82=value@10keV for ID3 adopted from Eric
+FWHM_ION = parameters.ENERGY_RESOLUTIONS_ERIC[DETECTOR_NAME]['Fiducial']  # 0.72=value@10keV for ID3 adopted from Eric
 FWHM_REC = functions.fwhm_rec_from_heat(FWHM_HEAT, VOLTAGE, 10.)
+
+
+print 'Voltage={voltage}V, threshold={thresh}keVnr, FWHM_ion={ion}keVee, FWHM_heat={heat}keVee, FWHM_rec={rec:.2f}keVnr\n'.format(
+    voltage=VOLTAGE, thresh=E_THRESH, ion=FWHM_ION, heat=FWHM_HEAT, rec=FWHM_REC)
 
 
 # Definition of maximum likelihood observables in RooFit
@@ -42,19 +52,19 @@ SIGMA_ION = ROOT.RooConstVar('sigma_ion', 'ionization energy resolution', FWHM_I
 
 
 # Calculation of specific detector efficiency and pdf
-total_efficiency = functions.simple_efficiency(DETECTOR_NAME, E_THRESH, FWHM_REC/2.35, 
-                                               rec_bins=int(E_REC_MAX*10), rec_min=0., rec_max=E_REC_MAX, 
-                                               ion_bins=int(E_ION_MAX*10), ion_min=0., ion_max=E_ION_MAX
+total_efficiency = functions.simple_efficiency(DETECTOR_NAME, E_THRESH, FWHM_REC/2.35,
+                                               rec_bins=int(E_REC_MAX*1/BINSIZE), rec_min=0., rec_max=E_REC_MAX,
+                                               ion_bins=int(E_ION_MAX*1/BINSIZE), ion_min=0., ion_max=E_ION_MAX
                                                )
-total_efficiency_datahist = ROOT.RooDataHist('total_efficiency_datahist', 'total_efficiency_datahist', 
+total_efficiency_datahist = ROOT.RooDataHist('total_efficiency_datahist', 'total_efficiency_datahist',
                                              ROOT.RooArgList(REC, ION), total_efficiency)
-total_efficiency_pdf = ROOT.RooHistPdf('total_efficiency_pdf', 'total_efficiency_pdf', 
+total_efficiency_pdf = ROOT.RooHistPdf('total_efficiency_pdf', 'total_efficiency_pdf',
                                        ROOT.RooArgSet(REC, ION), total_efficiency_datahist)
 
 
 # Read in of data set and output as scatter/graph
 realdata = ROOT.RooDataSet.read(DATA_FILE, ROOT.RooArgList(REC, ION))
-realdata_scatter = realdata.createHistogram(REC, ION, int(E_REC_MAX*10), int(E_ION_MAX*10))
+realdata_scatter = realdata.createHistogram(REC, ION, int(E_REC_MAX*1/BINSIZE), int(E_ION_MAX*1/BINSIZE))
 realdata_graph = functions.tgraph_from_dataset(realdata)  # not significantly more accurate than binned scatter
 events = int(realdata.numEntries())
 
@@ -154,43 +164,43 @@ Ge68_ext = ROOT.RooExtendPdf('Ge68_ext', 'Ge68_ext', Ge68_pdf, N_Ge68)
 
 
 # Definition of WIMP signal and pdf
-signal_hist = functions.wimp_signal(WIMP_MASS, SIGMA_ION.getVal(), SIGMA_REC.getVal(), 
-                                    rec_bins=int(E_REC_MAX*10), rec_min=0., rec_max=E_REC_MAX, 
-                                    ion_bins=int(E_ION_MAX*10), ion_min=0., ion_max=E_ION_MAX
+signal_hist = functions.wimp_signal(WIMP_MASS, SIGMA_ION.getVal(), SIGMA_REC.getVal(),
+                                    rec_bins=int(E_REC_MAX*1/BINSIZE), rec_min=0., rec_max=E_REC_MAX,
+                                    ion_bins=int(E_ION_MAX*1/BINSIZE), ion_min=0., ion_max=E_ION_MAX
                                     )
 signal_hist.Multiply(total_efficiency)
-signal_datahist = ROOT.RooDataHist('signal_datahist', 'signal_datahist', 
+signal_datahist = ROOT.RooDataHist('signal_datahist', 'signal_datahist',
                                    ROOT.RooArgList(REC, ION), signal_hist)
-signal_pdf = ROOT.RooHistPdf('signal_pdf', 'signal_pdf', 
+signal_pdf = ROOT.RooHistPdf('signal_pdf', 'signal_pdf',
                              ROOT.RooArgSet(REC, ION), signal_datahist)
-N_signal = ROOT.RooRealVar('N_signal', 'WIMP signal events', 0., 0., 10.)
+N_signal = ROOT.RooRealVar('N_signal', 'WIMP signal events', 0., -10., 10.)
 sig_ext = ROOT.RooExtendPdf('sig_ext', 'sig_ext', signal_pdf, N_signal)
 
 
 # Definition of flat gamma background pdf
-flat_gamma_bckgd_hist = functions.flat_gamma_bckgd(SIGMA_ION.getVal(), SIGMA_REC.getVal(), 
-                                                   rec_bins=int(E_REC_MAX*10), rec_min=0., rec_max=E_REC_MAX, 
-                                                   ion_bins=int(E_ION_MAX*10), ion_min=0., ion_max=E_ION_MAX
+flat_gamma_bckgd_hist = functions.flat_gamma_bckgd(SIGMA_ION.getVal(), SIGMA_REC.getVal(),
+                                                   rec_bins=int(E_REC_MAX*1/BINSIZE), rec_min=0., rec_max=E_REC_MAX,
+                                                   ion_bins=int(E_ION_MAX*1/BINSIZE), ion_min=0., ion_max=E_ION_MAX
                                                    )
 flat_gamma_bckgd_hist.Multiply(total_efficiency)
-flat_gamma_bckgd_datahist = ROOT.RooDataHist('flat_gamma_bckgd_datahist', 'flat_gamma_bckgd_datahist', 
+flat_gamma_bckgd_datahist = ROOT.RooDataHist('flat_gamma_bckgd_datahist', 'flat_gamma_bckgd_datahist',
                                              ROOT.RooArgList(REC, ION), flat_gamma_bckgd_hist)
-flat_gamma_bckgd_pdf = ROOT.RooHistPdf('flat_gamma_bckgd_pdf', 'flat_gamma_bckgd_pdf', 
+flat_gamma_bckgd_pdf = ROOT.RooHistPdf('flat_gamma_bckgd_pdf', 'flat_gamma_bckgd_pdf',
                                        ROOT.RooArgSet(REC, ION), flat_gamma_bckgd_datahist)
 N_flat = ROOT.RooRealVar('N_flat', 'bckgd events', 0., 0., events)
 flat_ext = ROOT.RooExtendPdf('flat_ext', 'flat_ext', flat_gamma_bckgd_pdf, N_flat)
 
 
 # Definition of background only as well as background plus signal pdf
-bckgd_and_sig_pdf = ROOT.RooAddPdf('bckgd_and_sig_pdf', 'bckgd_and_sig_pdf', 
+bckgd_and_sig_pdf = ROOT.RooAddPdf('bckgd_and_sig_pdf', 'bckgd_and_sig_pdf',
                                    ROOT.RooArgList(flat_ext, V49_ext, Cr51_ext, Mn54_ext, Fe55_ext, Zn65_ext, Ga68_ext, Ge68_ext, sig_ext))  #  , Co57_ext
-bckgd_only_pdf = ROOT.RooAddPdf('bckgd_only_pdf', 'bckgd_only_pdf', 
+bckgd_only_pdf = ROOT.RooAddPdf('bckgd_only_pdf', 'bckgd_only_pdf',
                                 ROOT.RooArgList(flat_ext, V49_ext, Cr51_ext, Mn54_ext, Fe55_ext, Zn65_ext, Ga68_ext, Ge68_ext))  #  , Co57_ext
 
 
 # Create negative log likelihood (NLL) object manually and minimize it
-nll = ROOT.RooNLLVar('nll', 'nll', bckgd_and_sig_pdf, realdata, rf.Extended(ROOT.kTRUE), 
-                     rf.PrintEvalErrors(0), rf.Verbose(ROOT.kFALSE))
+nll = ROOT.RooNLLVar('nll', 'nll', bckgd_and_sig_pdf, realdata, rf.Extended(ROOT.kTRUE),
+                     rf.PrintEvalErrors(0), rf.Verbose(ROOT.kFALSE), rf.NumCPU(2))
 minuit = ROOT.RooMinuit(nll)
 minuit.migrad()  # find minimum
 minuit.hesse()  # find symmetric errors
@@ -201,8 +211,8 @@ FitResult.Print('v')
 
 
 # Create histogram of best fit PDF
-bckgd_and_sig_hist = bckgd_and_sig_pdf.createHistogram('bckgd_and_sig_hist', REC, rf.Binning(int(E_REC_MAX*10)), 
-                                       rf.YVar(ION, rf.Binning(int(E_ION_MAX*10)))
+bckgd_and_sig_hist = bckgd_and_sig_pdf.createHistogram('bckgd_and_sig_hist', REC, rf.Binning(int(E_REC_MAX*1/BINSIZE)),
+                                       rf.YVar(ION, rf.Binning(int(E_ION_MAX*1/BINSIZE)))
                                        )
 bckgd_and_sig_hist.SetTitle('{detector} best fit PDF Bckgd + {mass}GeV Signal'.format(detector=DETECTOR_NAME, mass=WIMP_MASS))
 bckgd_and_sig_hist.SetStats(0)
@@ -221,10 +231,10 @@ N_wimp = rate * livetime * mass * 1e6  # 1e6 factor to scale to pb
 xs_max = N_max / N_wimp
 result_overview = {'N_sig' : N_sig, 'N_max' : N_max, 'rate' : rate, 'xs_max' : xs_max, 'N_wimp' : N_wimp}
 
-print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10}'.format('WIMP_MASS', 'Rate', 'N_signal', 
+print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10}'.format('WIMP_MASS', 'Rate', 'N_signal',
                                                                 'ErrorLow', 'ErrorHigh', 'XS-limit [pb]')
 print '-'*80
-print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10} ({5:.1e})'.format(WIMP_MASS, rate, N_sig, 
+print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10} ({5:.1e})'.format(WIMP_MASS, rate, N_sig,
                                                                 sigma_n_sig_low, sigma_n_sig_high, xs_max)
 
 
@@ -234,60 +244,60 @@ ionbins = int(E_ION_MAX*4)
 
 ionframe = ION.frame()
 ionframe.SetTitle('PDF component projection in E_{ion}')
-realdata.plotOn(ionframe, rf.Name('data'), 
+realdata.plotOn(ionframe, rf.Name('data'),
                 rf.Binning(ionbins), rf.MarkerSize(1.0))
-bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("flat_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("flat_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kGreen), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
-bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("V49_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("V49_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Cr51_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Cr51_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Mn54_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Mn54_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Fe55_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Fe55_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-#bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Co57_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+#bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Co57_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  #rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Zn65_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Zn65_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ge68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ge68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ga68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ga68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("sig_ext"), rf.Normalization(100.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("sig_ext"), rf.Normalization(100.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))
-bckgd_and_sig_pdf.plotOn(ionframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
 
 
 recframe = REC.frame()
 recframe.SetTitle('PDF component projection in E_{rec}')
-realdata.plotOn(recframe, rf.Name("data"), 
+realdata.plotOn(recframe, rf.Name("data"),
                 rf.Binning(recbins), rf.MarkerColor(ROOT.kBlack), rf.MarkerSize(1.0))
-bckgd_and_sig_pdf.plotOn(recframe, rf.Components("flat_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("flat_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kGreen), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
-bckgd_and_sig_pdf.plotOn(recframe, rf.Components("V49_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("V49_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Cr51_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Cr51_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Mn54_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Mn54_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Fe55_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Fe55_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-#bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Co57_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+#bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Co57_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  #rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Zn65_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Zn65_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ge68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ge68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ga68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ga68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(recframe, rf.Components("sig_ext"), rf.Normalization(100.0,ROOT.RooAbsReal.RelativeExpected), 
-                 rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))
-bckgd_and_sig_pdf.plotOn(recframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected), 
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("sig_ext"), rf.Normalization(100.0,ROOT.RooAbsReal.RelativeExpected),
+                 rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid), rf.Precision(1e-6))
+bckgd_and_sig_pdf.plotOn(recframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
 # Additional box with parameter fit values
-bckgd_and_sig_pdf.paramOn(recframe, rf.Format('NEU', rf.AutoPrecision(2)), 
+bckgd_and_sig_pdf.paramOn(recframe, rf.Format('NEU', rf.AutoPrecision(2)),
                   rf.Layout(0.1, 0.50, 0.9), rf.ShowConstants(ROOT.kFALSE))
 
 
@@ -349,38 +359,41 @@ ionframe.Draw()
 c1.cd(4)
 recframe.Draw()
 
-N_signal.setVal(0.1)
+
+# Set N_signal to different value than best fit to test resulting MC distribution
+N_signal.setVal(2.0)
+
 
 # Monte Carlo toy event sets and output
 if NUM_MC_SETS:
     # Creation of Monte Carlo toy event sets from bckgd only for theoretical limits
     if BCKGD_MC:
-        MC_study = ROOT.RooMCStudy(bckgd_only_pdf, ROOT.RooArgSet(REC, ION), rf.Silence(), 
-                                   rf.Extended(ROOT.kTRUE), rf.FitOptions(rf.Save(ROOT.kTRUE)), 
+        MC_study = ROOT.RooMCStudy(bckgd_only_pdf, ROOT.RooArgSet(REC, ION), rf.Silence(),
+                                   rf.Extended(ROOT.kTRUE), rf.FitOptions(rf.Save(ROOT.kTRUE)),
                                    rf.FitModel(bckgd_and_sig_pdf)
                                    )
     else:
-        MC_study = ROOT.RooMCStudy(bckgd_and_sig_pdf, ROOT.RooArgSet(REC, ION), rf.Silence(), 
-                                   rf.Extended(ROOT.kTRUE), rf.FitOptions(rf.Save(ROOT.kTRUE)), 
+        MC_study = ROOT.RooMCStudy(bckgd_and_sig_pdf, ROOT.RooArgSet(REC, ION), rf.Silence(),
+                                   rf.Extended(ROOT.kTRUE), rf.FitOptions(rf.Save(ROOT.kTRUE)),
                                    )
     MC_study.generateAndFit(NUM_MC_SETS)
-    
-    
+
+
     # plot results of the Monte Carlo toy set fit for all parameters
     c2 = ROOT.TCanvas('c2', 'MC toy set statistics for {mass} GeV'.format(mass=WIMP_MASS))
     NumFitParams = FitParams.getSize()
     c2.Divide(1, NumFitParams, 0.001, 0.001)
-    
+
     ParamLine.SetLineColor(ROOT.kRed)
-    
+
     for i in range(NumFitParams):
         parameter = FitParams[i]
         paramname = parameter.GetName()
         paramvalue = parameter.getVal()
-        
+
         pad = c2.cd(i+1)
         pad.Divide(3, 1, 0.001, 0.001)
-        
+
         pad.cd(1)
         ParamNLLFrame = parameter.frame()
         #ParamNLLFrame.SetTitle('NLL fit {name}'.format(name=paramname))
@@ -390,7 +403,7 @@ if NUM_MC_SETS:
         ParamNLLFrame.Draw()
         ROOT.gPad.Update()
         ParamLine.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
-        
+
         pad.cd(2)
         ParamDistriFrame = MC_study.plotParam(parameter)
         #ParamDistriFrame.SetTitle('MC distri {name}'.format(name=paramname))
@@ -398,17 +411,17 @@ if NUM_MC_SETS:
         #ParamDistriFrame.getHist().Fit('gaus', 'QEM')
         ROOT.gPad.Update()
         ParamLine.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
-        
+
         #pad.cd(3)
         #ParamPullFrame = MC_study.plotPull(parameter, rf.FitGauss())
         ##ParamPullFrame.SetTitle('MC pull distri {name}'.format(name=paramname))
         #ParamPullFrame.Draw()
         #ROOT.gPad.Update()
         #ZeroLine.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
-        
+
     c2.SetCanvasSize(1200, 2400)
-    
-    
+
+
     # Additional canvas with distribution of NLL values for all toy set fits
     RealDataBestFitNLL = nll.getVal()
     c3 = ROOT.TCanvas('c3', 'NLL distribution for Monte Carlo toy sets {mass}GeV'.format(mass=WIMP_MASS), 800, 600)
@@ -424,10 +437,10 @@ if NUM_MC_SETS:
 if NUM_MC_SETS:
     signal = FitResult.floatParsFinal().find('N_signal')
     signalvalue = signal.getVal()
-    
+
     c4 = ROOT.TCanvas('c4', 'N_signal fit & MC toy set statistics for {mass} GeV'.format(mass=WIMP_MASS), 1000, 500)
     c4.Divide(2)
-    
+
     c4.cd(1)
     ParamDistriFrame = MC_study.plotParam(signal)
     ParamDistriFrame.SetTitle('MC toy set fits')
@@ -436,13 +449,13 @@ if NUM_MC_SETS:
     ROOT.gPad.Update()
     ParamLine.SetLineColor(ROOT.kMagenta)
     ParamLine.DrawLine(signalvalue, ROOT.gPad.GetUymin(), signalvalue, ROOT.gPad.GetUymax())
-    
-    #c4.cd(2)
-    #ParamPullFrame = MC_study.plotPull(signal)  #rf.FitGauss(ROOT.kTRUE) not really useful because of non-gaussian features
-    #ParamPullFrame.SetTitle('MC toy set fits pull')
-    #ParamPullFrame.Draw()
-    #ROOT.gPad.Update()
-    #ZeroLine.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
+
+    c4.cd(2)
+    ParamPullFrame = MC_study.plotPull(signal)  #rf.FitGauss(ROOT.kTRUE) not really useful because of non-gaussian features
+    ParamPullFrame.SetTitle('MC toy set fits pull')
+    ParamPullFrame.Draw()
+    ROOT.gPad.Update()
+    ZeroLine.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
 
 
 # Alternative calculation of 90% C.L. limit on cross section using Monte Carlo statistics
@@ -457,11 +470,11 @@ if NUM_MC_SETS:
     print "\n2 different methods for limit estimation:"
     print '{0:15} | {1:15} | {2:10}'.format('method', '90% C.L. N_max','90% C.L. xs')
     print '-'*80
-    print '{0:15} | {1:15.3f} | {2:15.2e}'.format('NLL curve', 
-                                                  result_overview['N_max'], 
+    print '{0:15} | {1:15.3f} | {2:15.2e}'.format('NLL curve',
+                                                  result_overview['N_max'],
                                                   result_overview['xs_max'])
-    print '{0:15} | {1:15.3f} | {2:15.2e}'.format('MC toy set fits', 
-                                                  result_overview['N_sig_MC'], 
+    print '{0:15} | {1:15.3f} | {2:15.2e}'.format('MC toy set fits',
+                                                  result_overview['N_sig_MC'],
                                                   result_overview['xs_max_MC'])
 
 

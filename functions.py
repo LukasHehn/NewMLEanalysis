@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-######################################################
-#
-# Collection of python functions and ROOT functions
-# Lukas Hehn, 2013
-#
-######################################################
+####################################################################################################
+##
+## Collection of python functions and ROOT functions
+## Lukas Hehn, 2013
+##
+####################################################################################################
 
 import datetime as dt
 import calendar
@@ -234,14 +234,14 @@ def wimp_spectrum_eric(WIMP_MASS):
     return Hist
 
 
-def wimp_signal(WIMP_MASS, SIGMA_ION, SIGMA_REC, 
+def wimp_signal(WIMP_MASS, SIGMA_ION, SIGMA_REC,
                 rec_bins=200, rec_min=0., rec_max=20., ion_bins=100, ion_min=0., ion_max=10.):
     spectrum = wimp_spectrum_eric(WIMP_MASS)
 
     denom_i=1./(2*SIGMA_ION**2)
     denom_r=1./(2*SIGMA_REC**2)
-    hist = TH2F('wimp_signal_%sGeV'%WIMP_MASS, 
-              'WIMP signal %2iGeV;E_{rec} (keVnr);E_{ion} (keVee);Rate (cts/kg*day)'%WIMP_MASS, 
+    hist = TH2F('wimp_signal_%sGeV'%WIMP_MASS,
+              'WIMP signal %2iGeV;E_{rec} (keVnr);E_{ion} (keVee);Rate (cts/kg*day)'%WIMP_MASS,
               rec_bins, rec_min, rec_max, ion_bins, ion_min, ion_max)
     for recbin in range(1, hist.GetNbinsX()+1):
         Erec = hist.GetXaxis().GetBinCenter(recbin)
@@ -262,9 +262,9 @@ def wimp_signal(WIMP_MASS, SIGMA_ION, SIGMA_REC,
 def flat_gamma_bckgd(SIGMA_ION, SIGMA_REC, rec_bins=200, rec_min=0., rec_max=20., ion_bins=100, ion_min=0., ion_max=10.):
     denom_i=1./(2*SIGMA_ION**2)
     denom_r=1./(2*SIGMA_REC**2)
-    spectrum = TH1F('flat_gamma_spectrum', 'flat gamma spectrum', 
+    spectrum = TH1F('flat_gamma_spectrum', 'flat gamma spectrum',
                     rec_bins, rec_min, rec_max)  # this spectrum could actually contain a varying bckgd rate!
-    hist = TH2F('flat_gamma_bckgd', 'Flat Gamma Bckgd;E_{rec} (keVnr);E_{ion} (keVee);Rate (cts/kg*day)', 
+    hist = TH2F('flat_gamma_bckgd', 'Flat Gamma Bckgd;E_{rec} (keVnr);E_{ion} (keVee);Rate (cts/kg*day)',
                 rec_bins, rec_min, rec_max, ion_bins, ion_min, ion_max)
     for recbin in range(1, hist.GetNbinsX()+1):
         Erec = hist.GetXaxis().GetBinCenter(recbin)
@@ -281,20 +281,21 @@ def flat_gamma_bckgd(SIGMA_ION, SIGMA_REC, rec_bins=200, rec_min=0., rec_max=20.
     return hist
 
 
-def simple_efficiency(detector_name, e_thresh, sigma_rec, 
+def simple_efficiency(detector_name, e_thresh, sigma_rec,
                       rec_bins=200, rec_min=0., rec_max=20., ion_bins=100, ion_min=0., ion_max=10.):
-    hist = TH2F('total_efficiency', 'Total Efficiency;E_{rec} (keVnr);E_{ion} (keVee);Efficiency', 
+    hist = TH2F('total_efficiency', 'Total Efficiency;E_{rec} (keVnr);E_{ion} (keVee);Efficiency',
                 rec_bins, rec_min, rec_max, ion_bins, ion_min, ion_max)
-    
+
     trigger_eff = TF1('trigger_efficiency', '0.5*(1+ROOT::Math::erf(((x-[0])/([1]*sqrt(2)))))', rec_min, rec_max)
     trigger_eff.FixParameter(0, e_thresh)
     trigger_eff.FixParameter(1, sigma_rec)
-    
+    trigger_eff_points = int((rec_max - rec_min) * 100)  # 100 points per keV
+    trigger_eff.SetNpx(trigger_eff_points)
+
     fiducial_eff = TF1('fiducial_efficiency', fiducial_efficiency_func, ion_min, ion_max, 3)
-    
-    trigger_eff.FixParameter(0, e_thresh)
-    trigger_eff.FixParameter(1, sigma_rec)
-    
+    fiducial_eff_points = int((ion_max - ion_min) * 100)  # 100 points per keV
+    fiducial_eff.SetNpx(fiducial_eff_points)
+
     if detector_name == 'ID2':
         fiducial_eff.FixParameter(0, 0.99)
         fiducial_eff.FixParameter(1, -1.73)
@@ -318,14 +319,14 @@ def simple_efficiency(detector_name, e_thresh, sigma_rec,
     else:
         print "Detector not implemented!"
         return None
-    
+
     for recbin in range(1, hist.GetNbinsX()+1):
         Erec = hist.GetXaxis().GetBinCenter(recbin)
         eff_rec = trigger_eff.Eval(Erec)
         for ionbin in range(1, hist.GetNbinsY()+1):
             Eion = hist.GetYaxis().GetBinCenter(ionbin)
             eff_ion = fiducial_eff.Eval(Eion)
-            
+
             if eff_rec >= 0. and eff_ion >= 0.:
                 eff_total = eff_rec * eff_ion
             else:
@@ -344,3 +345,12 @@ def tgraph_from_dataset(dataset):
         ion = dataset.get(event).getRealValue('ion')
         tgraph.SetPoint(event, rec, ion)
     return tgraph
+
+
+def cut_wimp_signal(hist):
+    for recbin in range(1, hist.GetNbinsX()+1):
+        for ionbin in range(1, hist.GetNbinsY()+1):
+            rate = hist.GetBinContent(recbin, ionbin)
+            if rate < 0.1e-3:
+                hist.SetBinContent(recbin, ionbin, 0.0)
+    return "Histogram cut at 0.1"
