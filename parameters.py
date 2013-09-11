@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
 ####################################################################################################
-#
-# Frequently used parameters like detector masses, low mass paper cross section limit results and
-# energy binning choice.
-# Lukas Hehn, 2013
-#
+##
+## Frequently used parameters like detector masses, low mass paper cross section limit results and
+## energy binning choice.
+## Lukas Hehn, 2013
+##
 ####################################################################################################
 
 
@@ -99,7 +99,7 @@ LOW_MASS_RESULTS_ERIC = {
 }
 
 
-# measured heat and combined fiducial ionization resolutions (@10keV?) taken from technical/internal 
+# measured heat and combined fiducial ionization resolutions (@10keV?) taken from technical/internal
 # complements to the low mass EDW2 paper: "Search for low-energy nuclear recoils with ID data" from
 # E. Armengaud, April 2012 (updated 5 July 2012)
 # probably after baseline cuts
@@ -157,11 +157,22 @@ ENERGY_RESOLUTIONS_ERIC = {
 }
 
 
-# probably after baseline cuts
+# Average voltages found in Eric's internal noted (presumably after baseline cuts)
 AVG_VOLTAGES_ERIC = {
     'ID3' : 6.4,
     'ID5' : 0.0,
     'ID6' : 0.0,
     'ID401' : 7.6,
     'ID404' : 7.2
+}
+
+
+# Online Threshold in keVee crudely read from internal notes plots
+E_THRESHOLD_ERIC = {
+    'ID2' : 1.7,
+    'ID3' : 1.8,
+    'ID5' : 999,
+    'ID6' : 1.1,
+    'ID401' : 2.2,
+    'ID404' : 999
 }
