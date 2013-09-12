@@ -12,11 +12,11 @@
 # Choice of range for ionization and recoil energy as well as binsize and number of bins
 ENERGY_BINSIZE = 0.1
 ENERGY_BINNING = {
-    'ion' : {'Min' : 0., 'Max' : 10., 'Binsize' : ENERGY_BINSIZE},\
-    'rec' : {'Min' : 0., 'Max' : 20., 'Binsize' : ENERGY_BINSIZE}
+    'ion' : {'min' : 0., 'max' : 14., 'binsize' : ENERGY_BINSIZE},\
+    'rec' : {'min' : 0., 'max' : 25., 'binsize' : ENERGY_BINSIZE}
 }
-ENERGY_BINNING['ion']['Bins'] = int((ENERGY_BINNING['ion']['Max']-ENERGY_BINNING['ion']['Min'])/ENERGY_BINNING['ion']['Binsize'])
-ENERGY_BINNING['rec']['Bins'] = int((ENERGY_BINNING['rec']['Max']-ENERGY_BINNING['rec']['Min'])/ENERGY_BINNING['rec']['Binsize'])
+ENERGY_BINNING['ion']['bins'] = int((ENERGY_BINNING['ion']['max']-ENERGY_BINNING['ion']['min'])/ENERGY_BINNING['ion']['binsize'])
+ENERGY_BINNING['rec']['bins'] = int((ENERGY_BINNING['rec']['max']-ENERGY_BINNING['rec']['min'])/ENERGY_BINNING['rec']['binsize'])
 
 
 # Measured fiducial and physical masses for all ID detectors used in Run 12
@@ -130,7 +130,7 @@ ENERGY_RESOLUTIONS_ERIC = {
         'Coll2' : 1.59,
         'Veto1' : 0.95,
         'Veto2' : 1.76,
-        'Guard1' : 0,  # dead
+        'Guard1' : 999,  # dead
         'Guard2' : 0.92,
         'Fiducial' : 0.86
         },
@@ -175,4 +175,14 @@ E_THRESHOLD_ERIC = {
     'ID6' : 1.1,
     'ID401' : 2.2,
     'ID404' : 999
+}
+
+
+# Parameters for the fitted fiducial efficiency function
+FIDUCIAL_EFFICIENCY_PARAMETERS = {
+    'ID2' : {'max' : 0.99, 'slope' : -1.73, 'cutoff' : 1.74},
+    'ID3' : {'max' : 0.947, 'slope' : -1.876, 'cutoff' : 1.247},
+    'ID6' : {'max' : 0.96, 'slope' : -1.23, 'cutoff' : 1.43},
+    'ID401' : {'max' : 0.97, 'slope' : -2.386, 'cutoff' : 1.394},
+    'ID404' : {'max' : 0.97, 'slope' : -6.34, 'cutoff' : 1.90}
 }

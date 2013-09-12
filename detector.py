@@ -1,9 +1,21 @@
 #!/usr/bin/env python
+
+####################################################################################################
+##
+## The Detector class stores all the relevant baseline information for a detector and Run12 and
+## automatically calculated efficiency histograms
+## Lukas Hehn, 2013
+##
+####################################################################################################
+
+
 import ROOT
-from ROOT import TH1F, TH2F, TH3F
 import parameters
 import functions
 import numpy as np
+
+from ROOT import TH1F, TH2F, TH3F, TGraph
+from parameters import ENERGY_BINNING as binning
 
 
 class Detector:
@@ -26,45 +38,56 @@ class Detector:
 
         self.fGoodUnixPeriodsGap = self._InsertGaps(self.fGoodUnixPeriods)  # fit gaps between periods
 
-        self.fTimeBinning = self._CalcYearBins(self.fGoodUnixPeriodsGap)  # get numpy array with time bins in years
 
-        self.fEnergyRecBinning = np.array([parameters.ENERGY_BINNING['rec']['Min']+i*parameters.ENERGY_BINNING['rec']['Binsize'] for i in range(0, parameters.ENERGY_BINNING['rec']['Bins']+1)], dtype=np.float)
+        # Variable binning lists for all variables (time, recoil energy, ionization energy)
+        self.fTimeBinning = self._CalcYearBins(self.fGoodUnixPeriodsGap)
 
-        self.fEnergyIonBinning = np.array([parameters.ENERGY_BINNING['ion']['Min']+i*parameters.ENERGY_BINNING['ion']['Binsize'] for i in range(0, parameters.ENERGY_BINNING['ion']['Bins']+1)], dtype=np.float)
+        self.fEnergyRecBinning = np.array([binning['rec']['min']+i*binning['rec']['binsize'] for i in range(0, binning['rec']['bins']+1)], dtype=np.float)
 
-        # histograms
+        self.fEnergyIonBinning = np.array([binning['ion']['min']+i*binning['ion']['binsize'] for i in range(0, binning['ion']['bins']+1)], dtype=np.float)
+
+
+        # ROOT histograms with baseline values over variable time bins for all channels
         self.fHeatBaseline = TH1F(self.fName+'_heat_baseline',
                                   self.fName+' heat baseline;Time (years);Energy (keV)',
                                   self.fTimeBinning.size-1, self.fTimeBinning.flatten('C')
                                   )
+
         self.fHeatThreshold = TH1F(self.fName+'_heat_threshold',
                                    self.fName+' heat threshold;Time (years);Energy (keV)',
                                    self.fTimeBinning.size-1, self.fTimeBinning.flatten('C')
                                    )
+
         self.fFiducialTopBaseline = TH1F(self.fName+'_fiducial_top_baseline',
                                          self.fName+' fiducial top baseline;Time (years);Energy (keV)',
                                          self.fTimeBinning.size-1, self.fTimeBinning.flatten('C')
                                          )
+
         self.fFiducialBottomBaseline = TH1F(self.fName+'_fiducial_bottom_baseline',
                                             self.fName+' fiducial bottom baseline;Time (years);Energy (keV)',
                                             self.fTimeBinning.size-1, self.fTimeBinning.flatten('C')
                                             )
+
         self.fVetoTopBaseline = TH1F(self.fName+'_veto_top_baseline',
                                      self.fName+' veto top baseline;Time (years);Energy (keV)',
                                      self.fTimeBinning.size-1, self.fTimeBinning.flatten('C')
                                      )
+
         self.fVetoBottomBaseline = TH1F(self.fName+'_veto_bottom_baseline',
                                         self.fName+' veto bottom baseline;Time (years);Energy (keV)',
                                         self.fTimeBinning.size-1, self.fTimeBinning.flatten('C')
                                         )
+
         self.fGuardTopBaseline = TH1F(self.fName+'_guard_top_baseline',
                                       self.fName+' guard top baseline;Time (years);Energy (keV)',
                                       self.fTimeBinning.size-1, self.fTimeBinning.flatten('C')
                                       )
+
         self.fGuardBottomBaseline = TH1F(self.fName+'_guard_bottom_baseline',
                                          self.fName+' guard bottom baseline;Time (years);Energy (keV)',
                                          self.fTimeBinning.size-1, self.fTimeBinning.flatten('C')
                                          )
+
         self.fFiducialMeanBaseline = TH1F(self.fName+'_fiducial_mean',
                                           self.fName+' fiducial mean baseline;Time (years);Energy (keV)',
                                          self.fTimeBinning.size-1, self.fTimeBinning.flatten('C')
@@ -74,46 +97,50 @@ class Detector:
                              self.fName+' voltage;Time (years);Voltage (V)',
                              self.fTimeBinning.size-1, self.fTimeBinning.flatten('C')
                              )
+
+        # Histograms with efficiencies
         self.fLivetimeEfficiency = TH1F(self.fName+'_livetime_efficiency',
-                                        self.fName+' Livetime Efficiency;Time (years) ;Efficiency',
+                                        self.fName+' Livetime Efficiency;Time (years);Efficiency',
                                         self.fTimeBinning.size-1, self.fTimeBinning.flatten('C')
                                         )
 
         self.fTriggerEfficiency = TH2F(self.fName+'_trigger_efficiency',
-                                       self.fName+' Trigger Efficiency;Time (years); E_{Rec} (keV_{nr}); Efficiency',
+                                       self.fName+' Trigger Efficiency;Time (years);E_{Rec} (keVnr);Efficiency',
                                        self.fTimeBinning.size-1, self.fTimeBinning.flatten('C'),
                                        self.fEnergyRecBinning.size-1, self.fEnergyRecBinning.flatten('C')
                                        )
 
         self.fFiducialEfficiency = TH2F(self.fName+'_fiducial_efficiency',
-                                        self.fName+' Fiducial Efficiency;Time (years); E_{Ion} (keV_{ee}); Efficiency',
+                                        self.fName+' Fiducial Efficiency;Time (years);E_{Ion} (keVee);Efficiency',
                                         self.fTimeBinning.size-1, self.fTimeBinning.flatten('C'),
                                         self.fEnergyIonBinning.size-1, self.fEnergyIonBinning.flatten('C')
                                         )
 
         self.fTotalEfficiency = TH3F(self.fName+'_total_efficiency',
-                                     self.fName+' Total Efficiency;Time (years); E_{Rec} (keV_{nr}); E_{Ion} (keV_{ee}); Efficiency',
+                                     self.fName+' Total Efficiency; Time (years);E_{Rec} (keVnr);E_{Ion} (keVee);Efficiency',
                                      self.fTimeBinning.size-1, self.fTimeBinning.flatten('C'),
                                      self.fEnergyRecBinning.size-1, self.fEnergyRecBinning.flatten('C'),
                                      self.fEnergyIonBinning.size-1, self.fEnergyIonBinning.flatten('C')
                                      )
 
-
         self.fProjectedTriggerEfficiency = TH1F(self.fName+'_projected_trigger_efficiency',
-                                                self.fName+' Projected Trigger Efficiency;E_{Rec} (keV_{nr});Efficiency',
+                                                self.fName+' Projected Trigger Efficiency;E_{Rec} (keVnr);Efficiency',
                                                 self.fEnergyRecBinning.size-1, self.fEnergyRecBinning.flatten('C')
                                                 )
+
         self.fProjectedFiducialEfficiency = TH1F(self.fName+'_projected_fiducial_efficiency',
-                                                 self.fName+' Projected Fiducial Efficiency;E_{Ion} (keV_{ee});Efficiency',
+                                                 self.fName+' Projected Fiducial Efficiency;E_{Ion} (keVee);Efficiency',
                                                  self.fEnergyIonBinning.size-1, self.fEnergyIonBinning.flatten('C')
                                                  )
+
         self.fEnergyEfficiency = TH2F(self.fName+'_energy_efficiency',
-                                      self.fName+' Energy Efficiency;E_{Rec} (keV_{nr});E_{Ion} (keV_{ee});Efficiency',
+                                      self.fName+' Energy Efficiency;E_{Rec} (keVnr);E_{Ion} (keVee);Efficiency',
                                       self.fEnergyRecBinning.size-1, self.fEnergyRecBinning.flatten('C'),
                                       self.fEnergyIonBinning.size-1, self.fEnergyIonBinning.flatten('C')
                                       )
 
 
+        # Calculations to fill all efficiency histograms
         self._FillHistograms(self.fGoodUnixPeriods)
         self._CalcTriggerEfficiency()
         self._CalcFiducialEfficiency()
@@ -166,7 +193,8 @@ class Detector:
                 Fiducial_Bottom, Veto_Top, Veto_Bottom, Guard_Top, Guard_Bottom]
 
 
-    def _InsertGaps(self, InList):  # put gaps in between periods if not adjacent
+    # Put gaps in between periods if not adjacent
+    def _InsertGaps(self, InList):
         OutList = [ [ InList[i][0] ] for i in range(len(InList))] #copy first row of values to new list
         for i in range(1, len(InList[0])):
             unixstart = InList[0][i]
@@ -184,6 +212,7 @@ class Detector:
         return OutList
 
 
+    # Calculate time binning in units of years
     def _CalcYearBins(self, InList):
         UnixTimeStart = InList[0]
         OutList = []
@@ -211,7 +240,7 @@ class Detector:
             voltageflag = functions.voltage_flag(self.fVoltageFlagList, run)
             voltage = self.fERAConstants['gVolts'][voltageflag]
 
-            time = functions.unixtime_to_year((unixtimeend+unixtimestart)/2)
+            time = functions.unixtime_to_year((unixtimeend + unixtimestart) / 2.)
 
             self.fHeatBaseline.Fill(time, heat_baseline)
             self.fHeatThreshold.Fill(time, heat_threshold)
@@ -222,35 +251,38 @@ class Detector:
             self.fGuardTopBaseline.Fill(time, guard_top)
             self.fGuardBottomBaseline.Fill(time, guard_bottom)
 
-            fiducial_mean = (fiducial_top * fiducial_bottom)/ROOT.sqrt(pow(fiducial_top, 2) + pow(fiducial_bottom, 2))
+            fiducial_mean = (fiducial_top * fiducial_bottom) / ROOT.sqrt(fiducial_top**2 + fiducial_bottom**2)
             self.fFiducialMeanBaseline.Fill(time, fiducial_mean)
 
             self.fVoltage.Fill(time, voltage)
             self.fLivetimeEfficiency.Fill(time, 1.0)
 
 
+    # Calculate TH2 histogram with trigger efficiency in (x,y)=(time,rec)
     def _CalcTriggerEfficiency(self):
         trigger_eff_hist = self.fTriggerEfficiency
 
+        # Loop over time bins
         for xbin in range(1, trigger_eff_hist.GetNbinsX()+1):
             FWHM_heat = self.fHeatBaseline.GetBinContent(xbin)
-            Threshhold_heat = self.fHeatThreshold.GetBinContent(xbin)
+            threshhold_heat = self.fHeatThreshold.GetBinContent(xbin)
             voltage = self.fVoltage.GetBinContent(xbin)
 
             sigma_heat = FWHM_heat/2.35
 
-            Threshhold_rec = functions.recoil_energy_estimator(Threshhold_heat, voltage)
-            sigma_rec = functions.fwhm_rec_from_heat(sigma_heat, voltage, Threshhold_rec) #resolution at threshold energy
+            threshhold_rec = functions.recoil_energy_estimator(threshhold_heat, voltage)
+            sigma_rec = functions.fwhm_rec_from_heat(sigma_heat, voltage, threshhold_rec) #resolution at threshold energy
 
             EfficiencyCurve = functions.TRIGGER_EFFICIENCY
-            EfficiencyCurve.SetParameter(0, Threshhold_rec)
-            EfficiencyCurve.SetParameter(1, sigma_rec)
+            EfficiencyCurve.FixParameter(0, threshhold_rec)
+            EfficiencyCurve.FixParameter(1, sigma_rec)
 
+            # Loop over recoil energy bins
             for ybin in range(1, trigger_eff_hist.GetNbinsY()+1):
                 mean_energy = trigger_eff_hist.GetYaxis().GetBinCenter(ybin)
                 value = EfficiencyCurve.Eval(mean_energy)
 
-                if value >= 0.0 and FWHM_heat != 0.0 and Threshhold_heat != 0.0:
+                if value >= 0.0 and FWHM_heat != 0.0 and threshhold_heat != 0.0:
                     efficiency = value
                 else:
                     efficiency = 0.0
@@ -260,6 +292,7 @@ class Detector:
         return None
 
 
+    # Calculate TH2 histogram with fiducial efficiency in (x,y)=(time,ion)
     def _CalcFiducialEfficiency(self):
         fiducial_eff_hist = self.fFiducialEfficiency
 
@@ -267,9 +300,15 @@ class Detector:
             fiducial_baseline = self.fFiducialMeanBaseline.GetBinContent(xbin)
 
             EfficiencyCurve = functions.FIDUCIAL_EFFICIENCY
-            EfficiencyCurve.SetParameter(0, -1.876)
-            EfficiencyCurve.SetParameter(1, 1.247)
-            EfficiencyCurve.SetParameter(2, 0.947)
+
+            max_eff = parameters.FIDUCIAL_EFFICIENCY_PARAMETERS[self.fName]['max']
+            slope = parameters.FIDUCIAL_EFFICIENCY_PARAMETERS[self.fName]['slope']
+            cutoff = parameters.FIDUCIAL_EFFICIENCY_PARAMETERS[self.fName]['cutoff']
+
+            EfficiencyCurve.FixParameter(0, max_eff)
+            EfficiencyCurve.FixParameter(1, slope)
+            EfficiencyCurve.FixParameter(2, cutoff)
+
             for ybin in range(1, fiducial_eff_hist.GetNbinsY()+1):  # energy bin loop
                 mean_energy = fiducial_eff_hist.GetYaxis().GetBinCenter(ybin)
 
@@ -284,32 +323,37 @@ class Detector:
         return None
 
 
+    # Calculate the total energy efficiency TH3 histgram in (x,y,z)=(time,rec,ion)
     def _CalcTotalEfficiency(self):
         total_eff_hist = self.fTotalEfficiency
         livetime_eff_hist = self.fLivetimeEfficiency
         trigger_eff_hist = self.fTriggerEfficiency
         fiducial_eff_hist = self.fFiducialEfficiency
 
+        # Loop over time bins
         for xbin in range(1, total_eff_hist.GetNbinsX()+1):
             livetime_eff = livetime_eff_hist.GetBinContent(xbin)
 
+            # Loop over recoil energy bins
             for ybin in range(1, total_eff_hist.GetNbinsY()+1):
                 trigger_eff = trigger_eff_hist.GetBinContent(xbin, ybin)
 
+                # Loop over ionization energy bins
                 for zbin in range(1, total_eff_hist.GetNbinsZ()+1):
                     fiducial_eff = fiducial_eff_hist.GetBinContent(xbin, zbin)
 
-                    if livetime_eff != 0 and trigger_eff != 0 and fiducial_eff != 0:
+                    if livetime_eff != 0. and trigger_eff != 0. and fiducial_eff != 0.:
                         total_eff = livetime_eff * trigger_eff * fiducial_eff
                     else:
                         total_eff = 0.0
 
-            total_eff_hist.SetBinContent(xbin, ybin, zbin, total_eff)
-            total_eff_hist.SetBinError(xbin, ybin, zbin, 0.0)
+                    total_eff_hist.SetBinContent(xbin, ybin, zbin, total_eff)
+                    total_eff_hist.SetBinError(xbin, ybin, zbin, 0.0)
         return None
 
 
-    def _CalcProjectedEfficiency(self, efficiency):  # calculate livetime-weighted average energy efficiency hist
+    # Calculate the livetime weighted energy efficiency TH2 histogram in (x,y)=(rec,ion)
+    def _CalcProjectedEfficiency(self, efficiency):
         if efficiency == 'trigger':
             inhist = self.fTriggerEfficiency
             outhist = self.fProjectedTriggerEfficiency
@@ -317,14 +361,18 @@ class Detector:
             inhist = self.fFiducialEfficiency
             outhist = self.fProjectedFiducialEfficiency
 
+        # Loop over energy bins
         for ybin in range(1, inhist.GetNbinsY()+1):
-            Temp = 0.0
+            temp = 0.0
+
+            # Loop over time bins
             for xbin in range(1, inhist.GetNbinsX()+1):
                 timewidth = inhist.GetXaxis().GetBinWidth(xbin)
                 efficiency = inhist.GetBinContent(xbin, ybin)
-                Temp += timewidth * efficiency
-            Temp /= self.GetLivetime()
-            outhist.SetBinContent(ybin, Temp)
+                temp += timewidth * efficiency
+
+            temp /= self.GetLivetime()
+            outhist.SetBinContent(ybin, temp)
             outhist.SetBinError(ybin, 0.0)
         return None
 
@@ -342,8 +390,9 @@ class Detector:
         return True
 
 
+    # Check if event fullfills energy binning and is in valid livetime period
     def IsGoodEvent(self, UnixTime, EnergyRec, EnergyIon):
-        if parameters.ENERGY_BINNING['rec']['min'] <= EnergyRec <= parameters.ENERGY_BINNING['rec']['max'] and parameters.ENERGY_BINNING['ion']['min'] <= EnergyIon <= parameters.ENERGY_BINNING['ion']['max']:
+        if binning['rec']['min'] <= EnergyRec <= binning['rec']['max'] and binning['ion']['min'] <= EnergyIon <= binning['ion']['max']:
             for entry in range(len(self.fGoodUnixPeriods[0])):  # loop over the list with good periods
                 if UnixTime >= self.fGoodUnixPeriods[0][entry] and UnixTime <= self.fGoodUnixPeriods[1][entry]:
                     return True
@@ -352,46 +401,56 @@ class Detector:
             return False
 
 
+    # Add time and energy information of event to list
     def AddEvent(self, Time, EnergyRec, EnergyIon):
         self.fEventList[0].append(Time)
         self.fEventList[1].append(EnergyRec)
         self.fEventList[2].append(EnergyIon)
 
 
+    # Returns the name of the detector
     def GetName(self):
         return self.fName
 
 
+    # Returns the mass of the detector in kg
     def GetMass(self):
         return self.fMass
 
 
+    # Returns the live time of the detector in years
     def GetLivetime(self):
         return self.fLivetimeEfficiency.Integral('WIDTH')
 
 
+    # Returns the time span of the detector data in years
     def GetRuntime(self):
         StartTime = self.fLivetimeEfficiency.GetXaxis().GetBinLowEdge(1)
         EndTime = self.fLivetimeEfficiency.GetXaxis().GetBinLowEdge(self.fLivetimeEfficiency.GetNbinsX()+1)
         return EndTime-StartTime
 
 
-    def GetExposure(self): # in kg*days
+    # Returns detector exposure after cuts in kg.days
+    def GetExposure(self):
         return self.GetLivetime()*365.*self.fMass
 
 
+    # Returns TH1F histogram of livetime efficiency 0 = off, 1 = on with variable binning
     def GetLivetimeEfficiency(self):
         return self.fLivetimeEfficiency
 
 
+    # Returns TH2F histogram of fiducial cut efficiency in (x,y)=(time,ion)
     def GetFiducialEfficiency(self):
         return self.fFiducialEfficiency
 
 
+    # Returns TH2F histogram of trigger efficiency in (x,y)=(time,rec)
     def GetTriggerEfficiency(self):
         return self.fTriggerEfficiency
 
 
+    # Returns TH3F histogram of total efficiency in (x,y,z)=(time,rec,ion)
     def GetTotalEfficiency(self):
         return self.fTotalEfficiency
 
@@ -402,6 +461,7 @@ class Detector:
         return energy
 
 
+    # Return list of list with all baseline values
     def GetAllBaselines(self):
         outlist = [
             self.fHeatBaseline,
@@ -416,10 +476,12 @@ class Detector:
         return outlist
 
 
+    # Return variable time binning in years
     def GetTimeBinning(self):
         return self.fTimeBinning
 
 
+    # Return efficiency in recoil or ionization energy projected over livetime
     def GetProjectedEfficiency(self, name):
         if name == 'trigger':
             if self.fProjectedTriggerEfficiency.GetEntries() == 0.0:
@@ -452,6 +514,7 @@ class Detector:
         #return Temp
 
 
+    # Return livetime averaged value for baselines or voltage
     def GetAverageValue(self, name):
         if name == 'voltage': hist = self.fVoltage
         elif name == 'heat': hist = self.fHeatBaseline
@@ -464,7 +527,9 @@ class Detector:
         elif name == 'guardtop': hist = self.fGuardTopBaseline
         elif name == 'guardbottom': hist = self.fGuardBottomBaseline
 
-        return hist.Integral('WIDTH') / self.GetLivetime()
+        avg_value = hist.Integral('WIDTH') / self.GetLivetime()
+
+        return avg_value
 
 
     def GetEventGraphEnergy(self):
@@ -477,22 +542,27 @@ class Detector:
         return graph
 
 
+    # Calculates TH2F histogram of time weighted energy efficiency in (x,y)=(rec,ion)
     def _CalcEnergyEfficiency(self):
         inhist = self.fTotalEfficiency
         outhist = self.fEnergyEfficiency
 
+        # Loop over ion bins
         for zbin in range(1, inhist.GetNbinsZ()+1):
+            # Loop over rec bins
             for ybin in range(1, inhist.GetNbinsY()+1):
-                Temp = 0
+                Temp = 0.
+                # Loop over time bins
                 for xbin in range(1, inhist.GetNbinsX()+1):
                     timewidth = inhist.GetXaxis().GetBinWidth(xbin)
                     total_efficiency = inhist.GetBinContent(xbin, ybin, zbin)
                     Temp += timewidth * total_efficiency
-            Temp /= self.GetLivetime()
-            outhist.SetBinContent(ybin, zbin, Temp)
-            outhist.SetBinError(ybin, zbin, 0.0)
+                Temp /= self.GetLivetime()
+                outhist.SetBinContent(ybin, zbin, Temp)
+                outhist.SetBinError(ybin, zbin, 0.0)
         return None
 
 
+    # Returns TH2F histogram of time weighted energy efficiency in (x,y)=(rec,ion)
     def GetEnergyEfficiency(self):
         return self.fEnergyEfficiency
