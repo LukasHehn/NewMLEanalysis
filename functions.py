@@ -274,8 +274,8 @@ def flat_gamma_bckgd(SIGMA_ION, SIGMA_REC, rec_bins=200, rec_min=0., rec_max=20.
             for specbin in range(1, spectrum.GetNbinsX()+1):
                 ErecSpec = spectrum.GetXaxis().GetBinCenter(specbin)
                 EionSpec = ER_CENTROID_REAL.Eval(ErecSpec)
-                tutu = denom_r*(Erec-ErecSpec)**2
-                kernel = TMath.exp(-tutu-denom_i*(Eion-EionSpec)**2)
+                tutu = denom_r * (Erec - ErecSpec)**2
+                kernel = TMath.exp(-tutu-denom_i * (Eion - EionSpec)**2)
                 summe += kernel
             hist.SetBinContent(recbin, ionbin, summe)
     return hist
