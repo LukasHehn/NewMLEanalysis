@@ -25,11 +25,12 @@ E_REC_MAX = 20.
 BINSIZE = 0.1
 
 WIMP_MASS = 8
-NUM_MC_SETS = 1000  # number of MC toy event sets: 0 means no MC study
+NUM_MC_SETS = 5000  # number of MC toy event sets: 0 means no MC study
 
 # Flags to control procedures
 ENERGY_SCALING = False
 BCKGD_MC = False
+N_SIG_TEST = False
 SAVE_PLOTS = False
 
 # Detector specific parameters like resolutions
@@ -361,7 +362,9 @@ recframe.Draw()
 
 
 # Set N_signal to different value than best fit to test resulting MC distribution
-N_signal.setVal(2.0)
+if not BCKGD_MC and N_SIG_TEST:
+    N_signal.setVal(N_SIG_TEST)
+    N_signal.setError(0.0)
 
 
 # Monte Carlo toy event sets and output
@@ -483,3 +486,23 @@ if SAVE_PLOTS:
     if NUM_MC_SETS:
         c2.SaveAs('%iGeV_param-stats.png'%WIMP_MASS)
         c3.SaveAs('%iGeV_signal-stats.png'%WIMP_MASS)
+
+
+# Print overview of fit results for all MC toy sets
+if NUM_MC_SETS:
+    goodlist, badlist = [], []
+    for i in range(NUM_MC_SETS):
+        result = MC_study.fitResult(i)
+        n_sig = result.floatParsFinal().find('N_signal')
+        edm = result.edm()
+        covqual = result.covQual()
+        status = result.status()
+        invalid_nll = result.numInvalidNLL()
+        n_sig_error_low = n_sig.getErrorLo()
+        n_sig_val = n_sig.getVal()
+        print '{i:3<} {n_sig_val:8.2f} {n_sig_error_low:8.2f} {edm:10.2e} {status} {covqual} {invalid_nll}'.format(i=i, edm=edm, covqual=covqual, invalid_nll=invalid_nll, n_sig_error_low=n_sig_error_low, n_sig_val=n_sig_val, status=status)
+        if invalid_nll > 0:
+            print "bad",NUM_MC_SETS-i
+            badlist.append(n_sig_val)
+        else:
+            goodlist.append(n_sig_val)
