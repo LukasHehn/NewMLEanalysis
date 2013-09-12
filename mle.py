@@ -10,8 +10,9 @@
 import ROOT
 import functions
 import parameters
-from ROOT import RooFit as rf
 
+from ROOT import RooFit as rf
+from ROOT import TCanvas
 
 
 # Global variables used in the script
@@ -24,8 +25,8 @@ E_ION_MAX = 10.
 E_REC_MAX = 20.
 BINSIZE = 0.1
 
-WIMP_MASS = 8
-NUM_MC_SETS = 5000  # number of MC toy event sets: 0 means no MC study
+WIMP_MASS = 15
+NUM_MC_SETS = 0  # number of MC toy event sets: 0 means no MC study
 
 # Flags to control procedures
 ENERGY_SCALING = False
@@ -65,7 +66,7 @@ total_efficiency_pdf = ROOT.RooHistPdf('total_efficiency_pdf', 'total_efficiency
 
 # Read in of data set and output as scatter/graph
 realdata = ROOT.RooDataSet.read(DATA_FILE, ROOT.RooArgList(REC, ION))
-realdata_scatter = realdata.createHistogram(REC, ION, int(E_REC_MAX*1/BINSIZE), int(E_ION_MAX*1/BINSIZE))
+realdata_scatter = realdata.createHistogram(REC, ION, int(E_REC_MAX*1./BINSIZE), int(E_ION_MAX*1./BINSIZE))
 realdata_graph = functions.tgraph_from_dataset(realdata)  # not significantly more accurate than binned scatter
 events = int(realdata.numEntries())
 
@@ -166,8 +167,8 @@ Ge68_ext = ROOT.RooExtendPdf('Ge68_ext', 'Ge68_ext', Ge68_pdf, N_Ge68)
 
 # Definition of WIMP signal and pdf
 signal_hist = functions.wimp_signal(WIMP_MASS, SIGMA_ION.getVal(), SIGMA_REC.getVal(),
-                                    rec_bins=int(E_REC_MAX*1/BINSIZE), rec_min=0., rec_max=E_REC_MAX,
-                                    ion_bins=int(E_ION_MAX*1/BINSIZE), ion_min=0., ion_max=E_ION_MAX
+                                    rec_bins=int(E_REC_MAX*1./BINSIZE), rec_min=0., rec_max=E_REC_MAX,
+                                    ion_bins=int(E_ION_MAX*1./BINSIZE), ion_min=0., ion_max=E_ION_MAX
                                     )
 signal_hist.Multiply(total_efficiency)
 signal_datahist = ROOT.RooDataHist('signal_datahist', 'signal_datahist',
@@ -180,8 +181,8 @@ sig_ext = ROOT.RooExtendPdf('sig_ext', 'sig_ext', signal_pdf, N_signal)
 
 # Definition of flat gamma background pdf
 flat_gamma_bckgd_hist = functions.flat_gamma_bckgd(SIGMA_ION.getVal(), SIGMA_REC.getVal(),
-                                                   rec_bins=int(E_REC_MAX*1/BINSIZE), rec_min=0., rec_max=E_REC_MAX,
-                                                   ion_bins=int(E_ION_MAX*1/BINSIZE), ion_min=0., ion_max=E_ION_MAX
+                                                   rec_bins=int(E_REC_MAX*1./BINSIZE), rec_min=0., rec_max=E_REC_MAX,
+                                                   ion_bins=int(E_ION_MAX*1./BINSIZE), ion_min=0., ion_max=E_ION_MAX
                                                    )
 flat_gamma_bckgd_hist.Multiply(total_efficiency)
 flat_gamma_bckgd_datahist = ROOT.RooDataHist('flat_gamma_bckgd_datahist', 'flat_gamma_bckgd_datahist',
@@ -248,27 +249,27 @@ ionframe.SetTitle('PDF component projection in E_{ion}')
 realdata.plotOn(ionframe, rf.Name('data'),
                 rf.Binning(ionbins), rf.MarkerSize(1.0))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("flat_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kGreen), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
+                         rf.LineColor(ROOT.kGreen), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("V49_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+                         rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Cr51_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+                         rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Mn54_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+                         rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Fe55_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+                         rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 #bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Co57_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                  #rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Zn65_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+                         rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ge68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+                         rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ga68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+                         rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("sig_ext"), rf.Normalization(100.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))
+                         rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
+                         rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
 
 
 recframe = REC.frame()
@@ -276,30 +277,30 @@ recframe.SetTitle('PDF component projection in E_{rec}')
 realdata.plotOn(recframe, rf.Name("data"),
                 rf.Binning(recbins), rf.MarkerColor(ROOT.kBlack), rf.MarkerSize(1.0))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("flat_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kGreen), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
+                         rf.LineColor(ROOT.kGreen), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("V49_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+                         rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Cr51_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+                         rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Mn54_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+                         rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Fe55_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+                         rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 #bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Co57_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 #rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+                         #rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Zn65_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+                         rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ge68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+                         rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ga68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
+                         rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("sig_ext"), rf.Normalization(100.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid), rf.Precision(1e-6))
+                         rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid), rf.Precision(1e-6))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
-                 rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
+                         rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
 # Additional box with parameter fit values
 bckgd_and_sig_pdf.paramOn(recframe, rf.Format('NEU', rf.AutoPrecision(2)),
-                  rf.Layout(0.1, 0.50, 0.9), rf.ShowConstants(ROOT.kFALSE))
+                          rf.Layout(0.1, 0.50, 0.9), rf.ShowConstants(ROOT.kFALSE))
 
 
 # NLL frame for N_signal parameter
@@ -502,7 +503,6 @@ if NUM_MC_SETS:
         n_sig_val = n_sig.getVal()
         print '{i:3<} {n_sig_val:8.2f} {n_sig_error_low:8.2f} {edm:10.2e} {status} {covqual} {invalid_nll}'.format(i=i, edm=edm, covqual=covqual, invalid_nll=invalid_nll, n_sig_error_low=n_sig_error_low, n_sig_val=n_sig_val, status=status)
         if invalid_nll > 0:
-            print "bad",NUM_MC_SETS-i
             badlist.append(n_sig_val)
         else:
             goodlist.append(n_sig_val)
