@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-######################################################
+####################################################################################################
 #
 # Filter and display events from a KData file
 # Lukas Hehn, 2013
 #
-######################################################
+####################################################################################################
 
 import functions
 import parameters
@@ -16,7 +16,7 @@ from ROOT import TGraph, gROOT, TCanvas, KDataReader
 
 
 # Definition of parameters used for skimming event set
-DETECTOR_NAME = 'ID6'
+DETECTOR_NAME = 'ID401'
 #KDataFile = 'Data/Run12_ID3_bckg_with_subrecords.root'
 KDataFile = 'Data/Run12_ID3+6+401+404_bckg_with_subrecords.root'
 OutFileName = False  # 'Data/ID3_eventlist_lowE_corrected.txt'
@@ -27,8 +27,9 @@ E_REC_MAX = 25.
 IonFactor = 1.0/1.029
 HeatFactor = 1.0/1.017
 
-VOLTAGE = 6.4
-E_THRESH = 3.874
+VOLTAGE = parameters.AVG_VOLTAGES_ERIC[DETECTOR_NAME]
+E_THRESH_EE = parameters.E_THRESHOLD_ERIC[DETECTOR_NAME]
+E_THRESH = functions.recoil_energy_estimator(E_THRESH_EE, VOLTAGE)
 FWHM_HEAT = parameters.ENERGY_RESOLUTIONS_ERIC[DETECTOR_NAME]['Heat']
 FWHM_ION = parameters.ENERGY_RESOLUTIONS_ERIC[DETECTOR_NAME]['Fiducial']
 FWHM_REC = functions.fwhm_rec_from_heat(FWHM_HEAT, VOLTAGE, 10)
@@ -155,30 +156,30 @@ EventGraphCuts.SetMarkerColor(ROOT.kMagenta)
 
 
 # Get efficiency and flat gamma background
-total_efficiency = functions.simple_efficiency('ID3', E_THRESH, FWHM_REC/2.35, 
-                                               rec_bins=int(E_REC_MAX*10), rec_min=0., rec_max=E_REC_MAX, 
+total_efficiency = functions.simple_efficiency('ID3', E_THRESH, FWHM_REC/2.35,
+                                               rec_bins=int(E_REC_MAX*10), rec_min=0., rec_max=E_REC_MAX,
                                                ion_bins=int(E_ION_MAX*10), ion_min=0., ion_max=E_ION_MAX
                                                )
 
-gamma_bckgd = functions.flat_gamma_bckgd(FWHM_ION/2.35, FWHM_REC/2.35, 
-                                               rec_bins=int(E_REC_MAX*10), rec_min=0., rec_max=E_REC_MAX, 
-                                               ion_bins=int(E_ION_MAX*10), ion_min=0., ion_max=E_ION_MAX
-                                               )
+gamma_bckgd = functions.flat_gamma_bckgd(FWHM_ION/2.35, FWHM_REC/2.35,
+                                         rec_bins=int(E_REC_MAX*10), rec_min=0., rec_max=E_REC_MAX,
+                                         ion_bins=int(E_ION_MAX*10), ion_min=0., ion_max=E_ION_MAX
+                                         )
 gamma_bckgd.Multiply(total_efficiency)
 gamma_bckgd.Scale(1./gamma_bckgd.GetMaximum())  # maximum value is 1 afterwards
 gamma_bckgd.SetStats(0)
 
 # Also get wimp signal PDF
 if WIMP_MASS:
-    signal = functions.wimp_signal(WIMP_MASS, FWHM_ION/2.35, FWHM_REC/2.35, 
-                                               rec_bins=int(E_REC_MAX*10), rec_min=0., rec_max=E_REC_MAX, 
-                                               ion_bins=int(E_ION_MAX*10), ion_min=0., ion_max=E_ION_MAX
-                                               )
+    signal = functions.wimp_signal(WIMP_MASS, FWHM_ION/2.35, FWHM_REC/2.35,
+                                   rec_bins=int(E_REC_MAX*10), rec_min=0., rec_max=E_REC_MAX,
+                                   ion_bins=int(E_ION_MAX*10), ion_min=0., ion_max=E_ION_MAX
+                                   )
     signal.Multiply(total_efficiency)
     signal.Scale(1./signal.GetMaximum())  # maximum value is 1 afterwards
     signal.SetStats(0)
     print 'Created 2D WIMP signal for %i GeV mass'%WIMP_MASS
-    
+
     bckgd_plus_sig = gamma_bckgd.Clone('bckgd_plus_sig')
     bckgd_plus_sig.Add(signal)
     bckgd_plus_sig.SetStats(0)
