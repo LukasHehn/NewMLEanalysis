@@ -55,8 +55,7 @@ SIGMA_ION = ROOT.RooConstVar('sigma_ion', 'ionization energy resolution', FWHM_I
 
 # Calculation of specific detector efficiency and pdf
 total_efficiency = functions.simple_efficiency(DETECTOR_NAME, E_THRESH, FWHM_REC/2.35,
-                                               rec_bins=int(E_REC_MAX*1/BINSIZE), rec_min=0., rec_max=E_REC_MAX,
-                                               ion_bins=int(E_ION_MAX*1/BINSIZE), ion_min=0., ion_max=E_ION_MAX
+                                               binsize=BINSIZE, rec_max=E_REC_MAX, ion_max=E_ION_MAX
                                                )
 total_efficiency_datahist = ROOT.RooDataHist('total_efficiency_datahist', 'total_efficiency_datahist',
                                              ROOT.RooArgList(REC, ION), total_efficiency)
@@ -167,10 +166,10 @@ Ge68_ext = ROOT.RooExtendPdf('Ge68_ext', 'Ge68_ext', Ge68_pdf, N_Ge68)
 
 # Definition of WIMP signal and pdf
 signal_hist = functions.wimp_signal(WIMP_MASS, SIGMA_ION.getVal(), SIGMA_REC.getVal(),
-                                    rec_bins=int(E_REC_MAX*1./BINSIZE), rec_min=0., rec_max=E_REC_MAX,
-                                    ion_bins=int(E_ION_MAX*1./BINSIZE), ion_min=0., ion_max=E_ION_MAX
+                                    binsize=BINSIZE, rec_max=E_REC_MAX, ion_max=E_ION_MAX
                                     )
 signal_hist.Multiply(total_efficiency)
+functions.cut_histogram(signal_hist, 1e-5)
 signal_datahist = ROOT.RooDataHist('signal_datahist', 'signal_datahist',
                                    ROOT.RooArgList(REC, ION), signal_hist)
 signal_pdf = ROOT.RooHistPdf('signal_pdf', 'signal_pdf',
@@ -181,8 +180,7 @@ sig_ext = ROOT.RooExtendPdf('sig_ext', 'sig_ext', signal_pdf, N_signal)
 
 # Definition of flat gamma background pdf
 flat_gamma_bckgd_hist = functions.flat_gamma_bckgd(SIGMA_ION.getVal(), SIGMA_REC.getVal(),
-                                                   rec_bins=int(E_REC_MAX*1./BINSIZE), rec_min=0., rec_max=E_REC_MAX,
-                                                   ion_bins=int(E_ION_MAX*1./BINSIZE), ion_min=0., ion_max=E_ION_MAX
+                                                   binsize=BINSIZE, rec_max=E_REC_MAX, ion_max=E_ION_MAX
                                                    )
 flat_gamma_bckgd_hist.Multiply(total_efficiency)
 flat_gamma_bckgd_datahist = ROOT.RooDataHist('flat_gamma_bckgd_datahist', 'flat_gamma_bckgd_datahist',
@@ -194,10 +192,18 @@ flat_ext = ROOT.RooExtendPdf('flat_ext', 'flat_ext', flat_gamma_bckgd_pdf, N_fla
 
 
 # Definition of background only as well as background plus signal pdf
+#bckgd_and_sig_pdf = ROOT.RooAddPdf('bckgd_and_sig_pdf', 'bckgd_and_sig_pdf',
+                                   #ROOT.RooArgList(flat_ext, V49_ext, Cr51_ext, Mn54_ext, Fe55_ext, Zn65_ext, Ga68_ext, Ge68_ext, sig_ext))  #  , Co57_ext
+#bckgd_only_pdf = ROOT.RooAddPdf('bckgd_only_pdf', 'bckgd_only_pdf',
+                                #ROOT.RooArgList(flat_ext, V49_ext, Cr51_ext, Mn54_ext, Fe55_ext, Zn65_ext, Ga68_ext, Ge68_ext))  #  , Co57_ext
 bckgd_and_sig_pdf = ROOT.RooAddPdf('bckgd_and_sig_pdf', 'bckgd_and_sig_pdf',
-                                   ROOT.RooArgList(flat_ext, V49_ext, Cr51_ext, Mn54_ext, Fe55_ext, Zn65_ext, Ga68_ext, Ge68_ext, sig_ext))  #  , Co57_ext
+                                   ROOT.RooArgList(flat_gamma_bckgd_pdf, V49_pdf, Cr51_pdf, Mn54_pdf, Fe55_pdf, Zn65_pdf, Ga68_pdf, Ge68_pdf, signal_pdf),
+                                   ROOT.RooArgList(N_flat, N_V49, N_Cr51, N_Mn54, N_Fe55, N_Zn65, N_Ga68, N_Ge68, N_signal)
+                                   )  # no Co57
 bckgd_only_pdf = ROOT.RooAddPdf('bckgd_only_pdf', 'bckgd_only_pdf',
-                                ROOT.RooArgList(flat_ext, V49_ext, Cr51_ext, Mn54_ext, Fe55_ext, Zn65_ext, Ga68_ext, Ge68_ext))  #  , Co57_ext
+                                ROOT.RooArgList(flat_gamma_bckgd_pdf, V49_pdf, Cr51_pdf, Mn54_pdf, Fe55_pdf, Zn65_pdf, Ga68_pdf, Ge68_pdf),
+                                ROOT.RooArgList(N_flat, N_V49, N_Cr51, N_Mn54, N_Fe55, N_Zn65, N_Ga68, N_Ge68)
+                                )  #  Co57
 
 
 # Create negative log likelihood (NLL) object manually and minimize it

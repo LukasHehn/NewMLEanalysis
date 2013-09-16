@@ -130,7 +130,7 @@ def ER_CENTROID_REAL_FUNC(x, par):
     return f.real
 ER_CENTROID_REAL = TF1("ER_CENTROID_REAL", ER_CENTROID_REAL_FUNC, -5, 25, 1)
 ER_CENTROID_REAL.SetNpx(3000)
-ER_CENTROID_REAL.SetParameter(0, 6.4)
+ER_CENTROID_REAL.SetParName(0, 'Voltage')
 ER_CENTROID_REAL.SetTitle('Electron Recoil Centroid (Real Part Only);E_{Rec} [keVnr];E_{Heat} [keVee]')
 
 
@@ -156,7 +156,7 @@ GAMMA_CUT.SetTitle('Cut on ER Centroid;E_{Rec} [keVnr];E_{Heat} [keVee]')
 
 def fwhm_rec_from_heat(FWHM_heat, voltage, Erec):
     Q = LINDHARD_QUENCHING.Eval(Erec)
-    FWHM_rec = FWHM_heat * ((1+voltage/3.0)/(1+1.18*Q*voltage/3.0))
+    FWHM_rec = FWHM_heat * ((1 + voltage / 3.0) / (1 + 1.18 * Q * voltage / 3.0))
     return FWHM_rec
 
 
@@ -234,15 +234,17 @@ def wimp_spectrum_eric(WIMP_MASS):
     return Hist
 
 
-def wimp_signal(WIMP_MASS, SIGMA_ION, SIGMA_REC,
-                rec_bins=200, rec_min=0., rec_max=20., ion_bins=100, ion_min=0., ion_max=10.):
+def wimp_signal(WIMP_MASS, SIGMA_ION, SIGMA_REC, binsize=0.1, rec_max=20., ion_max=10.):
     spectrum = wimp_spectrum_eric(WIMP_MASS)
+
+    recbins = int(rec_max / binsize)
+    ionbins = int(ion_max / binsize)
 
     denom_i=1./(2*SIGMA_ION**2)
     denom_r=1./(2*SIGMA_REC**2)
     hist = TH2F('wimp_signal_%sGeV'%WIMP_MASS,
               'WIMP signal %2iGeV;E_{rec} (keVnr);E_{ion} (keVee);Rate (cts/kg*day)'%WIMP_MASS,
-              rec_bins, rec_min, rec_max, ion_bins, ion_min, ion_max)
+              recbins, 0., rec_max, ionbins, 0., ion_max)
     for recbin in range(1, hist.GetNbinsX()+1):
         Erec = hist.GetXaxis().GetBinCenter(recbin)
         for ionbin in range(1, hist.GetNbinsY()+1):
@@ -259,41 +261,61 @@ def wimp_signal(WIMP_MASS, SIGMA_ION, SIGMA_REC,
     return hist
 
 
-def flat_gamma_bckgd(SIGMA_ION, SIGMA_REC, rec_bins=200, rec_min=0., rec_max=20., ion_bins=100, ion_min=0., ion_max=10.):
+def flat_gamma_bckgd(SIGMA_ION, SIGMA_REC, voltage, binsize=0.1, rec_max=20., ion_max=10.):
+    recbins = int(rec_max / binsize)
+    ionbins = int(ion_max / binsize)
+
+    centroid = ER_CENTROID
+    centroid.FixParameter(0, voltage)
+
     denom_i=1./(2*SIGMA_ION**2)
     denom_r=1./(2*SIGMA_REC**2)
+
     spectrum = TH1F('flat_gamma_spectrum', 'flat gamma spectrum',
-                    rec_bins, rec_min, rec_max)  # this spectrum could actually contain a varying bckgd rate!
+                    int((rec_max + 2.) / binsize), 0., rec_max+2.)  # this spectrum could actually contain a varying bckgd rate!
+    dummy_hist = TH2F('dummy_hist', 'Flat Gamma Bckgd;E_{rec} (keVnr);E_{ion} (keVee);Rate (cts/kg*day)',
+                    int((rec_max + 2.) / binsize), 0., rec_max+2., int((ion_max + 2.) / binsize), 0., ion_max+2.)
     hist = TH2F('flat_gamma_bckgd', 'Flat Gamma Bckgd;E_{rec} (keVnr);E_{ion} (keVee);Rate (cts/kg*day)',
-                rec_bins, rec_min, rec_max, ion_bins, ion_min, ion_max)
-    for recbin in range(1, hist.GetNbinsX()+1):
-        Erec = hist.GetXaxis().GetBinCenter(recbin)
-        for ionbin in range(1, hist.GetNbinsY()+1):
-            Eion = hist.GetYaxis().GetBinCenter(ionbin)
-            summe=0
+                recbins, 0., rec_max, ionbins, 0., ion_max)
+
+    # Fill bigger histogram then necessary with smeared spectrum
+    for recbin in range(1, dummy_hist.GetNbinsX()+1):
+        Erec = dummy_hist.GetXaxis().GetBinCenter(recbin)
+        for ionbin in range(1, dummy_hist.GetNbinsY()+1):
+            Eion = dummy_hist.GetYaxis().GetBinCenter(ionbin)
+            summe = 0
             for specbin in range(1, spectrum.GetNbinsX()+1):
                 ErecSpec = spectrum.GetXaxis().GetBinCenter(specbin)
-                EionSpec = ER_CENTROID_REAL.Eval(ErecSpec)
+                EionSpec = centroid.Eval(ErecSpec)
                 tutu = denom_r * (Erec - ErecSpec)**2
                 kernel = TMath.exp(-tutu-denom_i * (Eion - EionSpec)**2)
                 summe += kernel
-            hist.SetBinContent(recbin, ionbin, summe)
+            dummy_hist.SetBinContent(recbin, ionbin, summe)
+
+    # Fill part of bigger histogram in smaller one (not very elegant I admit)
+    for recbin in range(1, hist.GetNbinsX()+1):
+        for ionbin in range(1, hist.GetNbinsY()+1):
+            rate = dummy_hist.GetBinContent(recbin, ionbin)
+            hist.SetBinContent(recbin, ionbin, rate)
+
     return hist
 
 
-def simple_efficiency(detector_name, e_thresh, sigma_rec,
-                      rec_bins=200, rec_min=0., rec_max=20., ion_bins=100, ion_min=0., ion_max=10.):
-    hist = TH2F('total_efficiency', 'Total Efficiency;E_{rec} (keVnr);E_{ion} (keVee);Efficiency',
-                rec_bins, rec_min, rec_max, ion_bins, ion_min, ion_max)
+def simple_efficiency(detector_name, e_thresh, sigma_rec, binsize=0.1, rec_max=20., ion_max=10.):
+    recbins = int(rec_max / binsize)
+    ionbins = int(ion_max / binsize)
 
-    trigger_eff = TF1('trigger_efficiency', '0.5*(1+ROOT::Math::erf(((x-[0])/([1]*sqrt(2)))))', rec_min, rec_max)
+    hist = TH2F('total_efficiency', 'Total Efficiency;E_{rec} (keVnr);E_{ion} (keVee);Efficiency',
+                recbins, 0.0, rec_max, ionbins, 0.0, ion_max)
+
+    trigger_eff = TF1('trigger_efficiency', '0.5*(1+ROOT::Math::erf(((x-[0])/([1]*sqrt(2)))))', 0.0, rec_max)
     trigger_eff.FixParameter(0, e_thresh)
     trigger_eff.FixParameter(1, sigma_rec)
-    trigger_eff_points = int((rec_max - rec_min) * 100)  # 100 points per keV
+    trigger_eff_points = int(rec_max) * 100  # 100 points per keV
     trigger_eff.SetNpx(trigger_eff_points)
 
-    fiducial_eff = TF1('fiducial_efficiency', fiducial_efficiency_func, ion_min, ion_max, 3)
-    fiducial_eff_points = int((ion_max - ion_min) * 100)  # 100 points per keV
+    fiducial_eff = TF1('fiducial_efficiency', fiducial_efficiency_func, 0.0, ion_max, 3)
+    fiducial_eff_points = int(ion_max) * 100  # 100 points per keV
     fiducial_eff.SetNpx(fiducial_eff_points)
 
     if detector_name == 'ID2':
@@ -347,10 +369,10 @@ def tgraph_from_dataset(dataset):
     return tgraph
 
 
-def cut_wimp_signal(hist):
+def cut_histogram(hist, cut):
     for recbin in range(1, hist.GetNbinsX()+1):
         for ionbin in range(1, hist.GetNbinsY()+1):
-            rate = hist.GetBinContent(recbin, ionbin)
-            if rate < 0.1e-3:
+            value = hist.GetBinContent(recbin, ionbin)
+            if value <= cut:
                 hist.SetBinContent(recbin, ionbin, 0.0)
-    return "Histogram cut at 0.1"
+    return "histogram cut at {cut:.1e}".format(cut=cut)
