@@ -53,8 +53,13 @@ class Detector:
                                   self.fTimeBinning.size-1, self.fTimeBinning.flatten('C')
                                   )
 
-        self.fHeatThreshold = TH1F(self.fName+'_heat_threshold',
-                                   self.fName+' heat threshold;Time (years);Energy (keV)',
+        self.fThresholdEE = TH1F(self.fName+'_threshold_ee',
+                                   self.fName+' threshold EE;Time (years);Energy (keVee)',
+                                   self.fTimeBinning.size-1, self.fTimeBinning.flatten('C')
+                                   )
+
+        self.fThresholdNR = TH1F(self.fName+'_threshold_nr',
+                                   self.fName+' threshold NR;Time (years);Energy (keVnr)',
                                    self.fTimeBinning.size-1, self.fTimeBinning.flatten('C')
                                    )
 
@@ -156,13 +161,13 @@ class Detector:
     def _ReadInGoodPeriods(self):
         inpath = 'Run12PeriodInformation/'
 
-        UnixStart, UnixEnd, Run, Heat_Baseline, Heat_Threshold, Fiducial_Top, Fiducial_Bottom, Veto_Top, Veto_Bottom, Guard_Top, Guard_Bottom = [], [], [], [], [], [], [], [], [], [], []
+        UnixStart, UnixEnd, Run, Heat_Baseline, Trigger_Threshold, Fiducial_Top, Fiducial_Bottom, Veto_Top, Veto_Bottom, Guard_Top, Guard_Bottom = [], [], [], [], [], [], [], [], [], [], []
 
         infile = open(inpath+self.fName+'_Bckgd.txt', 'r')
 
         ELEC = parameters.BASELINE_CUTS_ERIC[self.fName]
         for line in infile:
-            unixstart, unixend, run, periodflag, heat_baseline, heat_threshold, fiducial_top, fiducial_bottom, veto_top, veto_bottom, guard_top, guard_bottom = line.split()
+            unixstart, unixend, run, periodflag, heat_baseline, trigger_threshold, fiducial_top, fiducial_bottom, veto_top, veto_bottom, guard_top, guard_bottom = line.split()
 
             startday = functions.unixtime_to_day(int(unixstart))
             endday = functions.unixtime_to_day(int(unixend))
@@ -180,7 +185,7 @@ class Detector:
                 UnixEnd.append(int(unixend))
                 Run.append(str(run))
                 Heat_Baseline.append(float(heat_baseline))
-                Heat_Threshold.append(float(heat_threshold))
+                Trigger_Threshold.append(float(trigger_threshold))
                 Fiducial_Top.append(float(fiducial_top))
                 Fiducial_Bottom.append(float(fiducial_bottom))
                 Veto_Top.append(float(veto_top))
@@ -189,7 +194,7 @@ class Detector:
                 Guard_Bottom.append(float(guard_bottom))
         infile.close()
 
-        return [UnixStart, UnixEnd, Run, Heat_Baseline, Heat_Threshold, Fiducial_Top,
+        return [UnixStart, UnixEnd, Run, Heat_Baseline, Trigger_Threshold, Fiducial_Top,
                 Fiducial_Bottom, Veto_Top, Veto_Bottom, Guard_Top, Guard_Bottom]
 
 
@@ -229,7 +234,7 @@ class Detector:
             unixtimeend = InList[1][i]
             run = InList[2][i]
             heat_baseline = InList[3][i]
-            heat_threshold = InList[4][i]
+            threshold_ee = InList[4][i]
             fiducial_top = InList[5][i]
             fiducial_bottom = InList[6][i]
             veto_top = InList[7][i]
@@ -240,20 +245,22 @@ class Detector:
             voltageflag = functions.voltage_flag(self.fVoltageFlagList, run)
             voltage = self.fERAConstants['gVolts'][voltageflag]
 
+            threshold_nr = functions.recoil_energy_estimator(threshold_ee, voltage)
+
             time = functions.unixtime_to_year((unixtimeend + unixtimestart) / 2.)
 
+            fiducial_mean = (fiducial_top * fiducial_bottom) / ROOT.sqrt(fiducial_top**2 + fiducial_bottom**2)
+
             self.fHeatBaseline.Fill(time, heat_baseline)
-            self.fHeatThreshold.Fill(time, heat_threshold)
+            self.fThresholdEE.Fill(time, threshold_ee)
+            self.fThresholdNR.Fill(time, threshold_nr)
             self.fFiducialTopBaseline.Fill(time, fiducial_top)
             self.fFiducialBottomBaseline.Fill(time, fiducial_bottom)
             self.fVetoTopBaseline.Fill(time, veto_top)
             self.fVetoBottomBaseline.Fill(time, veto_bottom)
             self.fGuardTopBaseline.Fill(time, guard_top)
             self.fGuardBottomBaseline.Fill(time, guard_bottom)
-
-            fiducial_mean = (fiducial_top * fiducial_bottom) / ROOT.sqrt(fiducial_top**2 + fiducial_bottom**2)
             self.fFiducialMeanBaseline.Fill(time, fiducial_mean)
-
             self.fVoltage.Fill(time, voltage)
             self.fLivetimeEfficiency.Fill(time, 1.0)
 
@@ -265,16 +272,15 @@ class Detector:
         # Loop over time bins
         for xbin in range(1, trigger_eff_hist.GetNbinsX()+1):
             FWHM_heat = self.fHeatBaseline.GetBinContent(xbin)
-            threshhold_heat = self.fHeatThreshold.GetBinContent(xbin)
+            threshold_rec = self.fThresholdNR.GetBinContent(xbin)
             voltage = self.fVoltage.GetBinContent(xbin)
 
             sigma_heat = FWHM_heat/2.35
 
-            threshhold_rec = functions.recoil_energy_estimator(threshhold_heat, voltage)
-            sigma_rec = functions.fwhm_rec_from_heat(sigma_heat, voltage, threshhold_rec) #resolution at threshold energy
+            sigma_rec = functions.fwhm_rec_from_heat(sigma_heat, voltage, threshold_rec) #resolution at threshold energy
 
             EfficiencyCurve = functions.TRIGGER_EFFICIENCY
-            EfficiencyCurve.FixParameter(0, threshhold_rec)
+            EfficiencyCurve.FixParameter(0, threshold_rec)
             EfficiencyCurve.FixParameter(1, sigma_rec)
 
             # Loop over recoil energy bins
@@ -282,7 +288,7 @@ class Detector:
                 mean_energy = trigger_eff_hist.GetYaxis().GetBinCenter(ybin)
                 value = EfficiencyCurve.Eval(mean_energy)
 
-                if value >= 0.0 and FWHM_heat != 0.0 and threshhold_heat != 0.0:
+                if value >= 0.0 and FWHM_heat != 0.0 and threshold_rec != 0.0:
                     efficiency = value
                 else:
                     efficiency = 0.0
@@ -465,7 +471,8 @@ class Detector:
     def GetAllBaselines(self):
         outlist = [
             self.fHeatBaseline,
-            self.fHeatThreshold,
+            self.fThresholdEE,
+            self.fThresholdNR,
             self.fFiducialTopBaseline,
             self.fFiducialBottomBaseline,
             self.fVetoTopBaseline,
@@ -493,32 +500,12 @@ class Detector:
             return self.fProjectedFiducialEfficiency
 
 
-    #def GetWeightedAverage(self, name):
-        #if name == 'voltage': hist = self.fVoltage
-        #elif name == 'heat': hist = self.fHeatBaseline
-        #elif name == 'threshold': hist = self.fHeatThreshold
-        #elif name == 'fiducialtop': hist = self.fFiducialTopBaseline
-        #elif name == 'fiducialbottom': hist = self.fFiducialBottomBaseline
-        #elif name == 'fiducialmean': hist = self.fFiducialMeanBaseline
-        #elif name == 'vetotop': hist = self.fVetoTopBaseline
-        #elif name == 'vetobottom': hist = self.fVetoBottomBaseline
-        #elif name == 'guardtop': hist = self.fGuardTopBaseline
-        #elif name == 'guardbottom': hist = self.fGuardBottomBaseline
-
-        #Temp = 0.0
-        #for xbin in range(1, hist.GetNbinsX()+1):
-            #timewidth = hist.GetXaxis().GetBinWidth(xbin)
-            #value = hist.GetBinContent(xbin)
-            #Temp += timewidth * value
-        #Temp /= self.GetLivetime()
-        #return Temp
-
-
     # Return livetime averaged value for baselines or voltage
     def GetWeightedAverage(self, name):
         if name == 'voltage': hist = self.fVoltage
         elif name == 'heat': hist = self.fHeatBaseline
-        elif name == 'threshold': hist = self.fHeatThreshold
+        elif name == 'thresholdEE': hist = self.fThresholdEE
+        elif name == 'thresholdNR': hist = self.fThresholdNR
         elif name == 'fiducialtop': hist = self.fFiducialTopBaseline
         elif name == 'fiducialbottom': hist = self.fFiducialBottomBaseline
         elif name == 'fiducialmean': hist = self.fFiducialMeanBaseline
