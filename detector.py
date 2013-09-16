@@ -493,7 +493,7 @@ class Detector:
             return self.fProjectedFiducialEfficiency
 
 
-    #def GetAverageValue(self, name):
+    #def GetWeightedAverage(self, name):
         #if name == 'voltage': hist = self.fVoltage
         #elif name == 'heat': hist = self.fHeatBaseline
         #elif name == 'threshold': hist = self.fHeatThreshold
@@ -515,7 +515,7 @@ class Detector:
 
 
     # Return livetime averaged value for baselines or voltage
-    def GetAverageValue(self, name):
+    def GetWeightedAverage(self, name):
         if name == 'voltage': hist = self.fVoltage
         elif name == 'heat': hist = self.fHeatBaseline
         elif name == 'threshold': hist = self.fHeatThreshold

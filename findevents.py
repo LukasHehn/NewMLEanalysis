@@ -16,7 +16,7 @@ from ROOT import TGraph, gROOT, TCanvas, KDataReader
 
 
 # Definition of parameters used for skimming event set
-DETECTOR_NAME = 'ID3'
+DETECTOR_NAME = 'ID401'
 KDataFile = 'Data/Run12_ID3+6+401+404_bckg_with_subrecords.root'
 OutFileName = False  # 'Data/ID3_eventlist_ion-rec-only.txt'
 WIMP_MASS = 8  # if wimp mass set, show also signal density of wimp signal
@@ -34,17 +34,18 @@ IonFactor = 1.0/1.029
 HeatFactor = 1.0/1.017
 
 
-# Import values for baseline, voltage and threshold from parameter dictionary
-VOLTAGE = parameters.AVG_VOLTAGES_ERIC[DETECTOR_NAME]
-E_THRESH_EE = parameters.E_THRESHOLD_ERIC[DETECTOR_NAME]
-E_THRESH_NR = functions.recoil_energy_estimator(E_THRESH_EE, VOLTAGE)
+# Import values for baseline, AVG_VOLTAGE and threshold from parameter dictionary
+ERA_CONSTANTS = functions.era_constants(DETECTOR_NAME)
+AVG_VOLTAGE = parameters.AVG_VOLTAGES_LUKAS[DETECTOR_NAME]
+E_THRESH_EE = parameters.E_THRESHOLD_LUKAS[DETECTOR_NAME]
+E_THRESH_NR = functions.recoil_energy_estimator(E_THRESH_EE, AVG_VOLTAGE)
 FWHM_HEAT = parameters.ENERGY_RESOLUTIONS_ERIC[DETECTOR_NAME]['Heat']
 FWHM_ION = parameters.ENERGY_RESOLUTIONS_ERIC[DETECTOR_NAME]['Fiducial']
-FWHM_REC = functions.fwhm_rec_from_heat(FWHM_HEAT, VOLTAGE, 10)
+FWHM_REC = functions.fwhm_rec_from_heat(FWHM_HEAT, AVG_VOLTAGE, 10)
 GAMMA_CUT = 1.96  # gamma cut from ER centroid in standard deviations
 
-print 'Voltage={voltage}V, threshold={thresh:.2f}keVnr, FWHM_ion={ion}keVee, FWHM_heat={heat}keVee, FWHM_rec={rec:.2f}keVnr\n'.format(
-    voltage=VOLTAGE, thresh=E_THRESH_NR, ion=FWHM_ION, heat=FWHM_HEAT, rec=FWHM_REC)
+print 'AVG_VOLTAGE={AVG_VOLTAGE}V, threshold={thresh:.2f}keVnr, FWHM_ion={ion}keVee, FWHM_heat={heat}keVee, FWHM_rec={rec:.2f}keVnr\n'.format(
+    AVG_VOLTAGE=AVG_VOLTAGE, thresh=E_THRESH_NR, ion=FWHM_ION, heat=FWHM_HEAT, rec=FWHM_REC)
 
 
 # Get dictionary with cuts for all baselines
@@ -96,13 +97,16 @@ for entry in range(entries):
            and CUTS['Guard1']['Min'] < bolo.GetBaselineNoiseGuard(1) < CUTS['Guard1']['Max']\
            and CUTS['Guard2']['Min'] < bolo.GetBaselineNoiseGuard(2) < CUTS['Guard2']['Max']\
            and bolo.GetEventFlag() == 2\
-           and bolo.GetVoltageFlag >= 0\
+           and bolo.GetVoltageFlag() >= 0\
            and bolo.GetIonPulseTimeOffset() < 600\
            and bolo.GetChi2Flag():
 
-            EnergyRec = functions.recoil_energy_estimator(EnergyHeat, VOLTAGE)  # estimate recoil energy
+            VoltageFlag = bolo.GetVoltageFlag()
+            Voltage = ERA_CONSTANTS['gVolts'][VoltageFlag]
 
-            if 0 < EnergyIon < E_ION_MAX and 0 < EnergyRec < E_REC_MAX:
+            EnergyRec = functions.recoil_energy_estimator(EnergyHeat, Voltage)  # estimate recoil energy
+
+            if 0. < EnergyIon < E_ION_MAX and 0. < EnergyRec < E_REC_MAX:
 
                 TimeList.append(UnixTime)
                 IonList.append(EnergyIon)
@@ -111,7 +115,7 @@ for entry in range(entries):
 
                 Comment = ' '
 
-                if eventcounter%20 == 0:
+                if eventcounter%30 == 0:
                     print '-'*100
                     print '{0:10} | {1:12} | {2:12} | {3:10} | {4:10} | {5:10} | {6:10}'.format('FileEntry', 'EventNumber', 'UnixTime', 'EnergyHeat', 'EnergyRec', 'EnergyIon', 'Comment')
                     print '-'*100
@@ -153,7 +157,7 @@ total_efficiency = functions.simple_efficiency(DETECTOR_NAME, E_THRESH_NR, FWHM_
                                                binsize=BINSIZE, rec_max=E_REC_MAX, ion_max=E_ION_MAX
                                                )
 
-gamma_bckgd = functions.flat_gamma_bckgd(FWHM_ION/2.35, FWHM_REC/2.35, VOLTAGE,
+gamma_bckgd = functions.flat_gamma_bckgd(FWHM_ION/2.35, FWHM_REC/2.35, AVG_VOLTAGE,
                                          binsize=BINSIZE, rec_max=E_REC_MAX, ion_max=E_ION_MAX
                                          )
 gamma_bckgd.Multiply(total_efficiency)
@@ -188,7 +192,7 @@ else:
 EventGraph.Draw('SAMEP')
 
 
-functions.ER_CENTROID.SetParameter(0, VOLTAGE)
+functions.ER_CENTROID.SetParameter(0, AVG_VOLTAGE)
 functions.ER_CENTROID.SetLineColor(ROOT.kBlack)
 functions.ER_CENTROID.SetLineWidth(3)
 functions.ER_CENTROID.Draw('SAME')
@@ -200,7 +204,7 @@ functions.NR_CENTROID.Draw('SAME')
 
 # Plot Gamma cut line
 if GAMMA_CUT:
-    functions.GAMMA_CUT.FixParameter(0, VOLTAGE)
+    functions.GAMMA_CUT.FixParameter(0, AVG_VOLTAGE)
     functions.GAMMA_CUT.FixParameter(2, FWHM_ION/2.35)
     functions.GAMMA_CUT.FixParameter(3, FWHM_REC/2.35)
     functions.GAMMA_CUT.FixParameter(4, GAMMA_CUT)
