@@ -19,31 +19,38 @@ from ROOT import TCanvas
 DETECTOR_NAME = 'ID3'
 
 DATA_FILE = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
-#DATA_FILE = '/kalinka/home/hehn/PhD/NewMLEanalysis/Data/ID3_eventlist_ion-rec-only.txt'
+#DATA_FILE = '/kalinka/home/hehn/PhD/NewMLEanalysis/Data/ID401_eventlist_ion-rec-only.txt'
 
+
+# Energy Binning and binsize
 E_ION_MAX = 10.
 E_REC_MAX = 20.
 BINSIZE = 0.1
 
-WIMP_MASS = 15
-NUM_MC_SETS = 0  # number of MC toy event sets: 0 means no MC study
+
+WIMP_MASS = 8
+NUM_MC_SETS = 10000  # number of MC toy event sets: 0 means no MC study
+N_SIGNAL_MIN = -10.  # lower border for n_signal parameter
+
 
 # Flags to control procedures
-ENERGY_SCALING = False
-BCKGD_MC = False
-N_SIG_TEST = False
-SAVE_PLOTS = False
+E_ION_SCALING = False  # switches on fit parameter to scale energy ion
+E_REC_SCALING = True  # switches on fit parameter to scale energy rec
+BCKGD_MC = False  # switches on MC study where toy events are produces with bckgd model only
+N_SIG_TEST = False  # either a False flag or a value for N_signal parameter before starting MC study
+SAVE_PLOTS = True  # save all plots as png
+
 
 # Detector specific parameters like resolutions
 VOLTAGE = parameters.AVG_VOLTAGES_ERIC[DETECTOR_NAME]  # 6.4 volt during whole Run 12 for ID3
-E_THRESH = 3.874
+E_THRESH_EE = parameters.E_THRESHOLD_LUKAS[DETECTOR_NAME]['EE']
+E_THRESH_NR = parameters.E_THRESHOLD_LUKAS[DETECTOR_NAME]['NR']
 FWHM_HEAT = parameters.ENERGY_RESOLUTIONS_ERIC[DETECTOR_NAME]['Heat']  # 0.82=value@10keV for ID3 adopted from Eric
 FWHM_ION = parameters.ENERGY_RESOLUTIONS_ERIC[DETECTOR_NAME]['Fiducial']  # 0.72=value@10keV for ID3 adopted from Eric
 FWHM_REC = functions.fwhm_rec_from_heat(FWHM_HEAT, VOLTAGE, 10.)
 
-
-print 'Voltage={voltage}V, threshold={thresh}keVnr, FWHM_ion={ion}keVee, FWHM_heat={heat}keVee, FWHM_rec={rec:.2f}keVnr\n'.format(
-    voltage=VOLTAGE, thresh=E_THRESH, ion=FWHM_ION, heat=FWHM_HEAT, rec=FWHM_REC)
+print '\nVoltage={voltage}V, threshold={threshEE}keVee={threshNR}keVnr, FWHM_ion={ion}keVee, FWHM_heat={heat}keVee, FWHM_rec={rec:.2f}keVnr\n'.format(
+    voltage=VOLTAGE, threshEE=E_THRESH_EE, threshNR=E_THRESH_NR, ion=FWHM_ION, heat=FWHM_HEAT, rec=FWHM_REC)
 
 
 # Definition of maximum likelihood observables in RooFit
@@ -54,7 +61,7 @@ SIGMA_ION = ROOT.RooConstVar('sigma_ion', 'ionization energy resolution', FWHM_I
 
 
 # Calculation of specific detector efficiency and pdf
-total_efficiency = functions.simple_efficiency(DETECTOR_NAME, E_THRESH, FWHM_REC/2.35,
+total_efficiency = functions.simple_efficiency(DETECTOR_NAME, E_THRESH_NR, FWHM_REC/2.35,
                                                binsize=BINSIZE, rec_max=E_REC_MAX, ion_max=E_ION_MAX
                                                )
 total_efficiency_datahist = ROOT.RooDataHist('total_efficiency_datahist', 'total_efficiency_datahist',
@@ -77,8 +84,9 @@ functions.ER_CENTROID.FixParameter(0, VOLTAGE)
 # Scaling factors allow for correction of gamma peak energy positions.
 ion_scaling = ROOT.RooRealVar('ion_scaling', 'scaling factor ionization energy', 1.0, 0.95, 1.05)
 rec_scaling = ROOT.RooRealVar('rec_scaling', 'scaling factor recoil energy', 1.0, 0.95, 1.05)
-if not ENERGY_SCALING:
+if not E_ION_SCALING:
     ion_scaling.setConstant(ROOT.kTRUE)
+if not E_REC_SCALING:
     rec_scaling.setConstant(ROOT.kTRUE)
 
 
@@ -169,17 +177,17 @@ signal_hist = functions.wimp_signal(WIMP_MASS, SIGMA_ION.getVal(), SIGMA_REC.get
                                     binsize=BINSIZE, rec_max=E_REC_MAX, ion_max=E_ION_MAX
                                     )
 signal_hist.Multiply(total_efficiency)
-functions.cut_histogram(signal_hist, 1e-5)
+#functions.cut_histogram(signal_hist, 1e-5)
 signal_datahist = ROOT.RooDataHist('signal_datahist', 'signal_datahist',
                                    ROOT.RooArgList(REC, ION), signal_hist)
 signal_pdf = ROOT.RooHistPdf('signal_pdf', 'signal_pdf',
                              ROOT.RooArgSet(REC, ION), signal_datahist)
-N_signal = ROOT.RooRealVar('N_signal', 'WIMP signal events', 0., -10., 10.)
+N_signal = ROOT.RooRealVar('N_signal', 'WIMP signal events', 0., N_SIGNAL_MIN, 10.)
 sig_ext = ROOT.RooExtendPdf('sig_ext', 'sig_ext', signal_pdf, N_signal)
 
 
 # Definition of flat gamma background pdf
-flat_gamma_bckgd_hist = functions.flat_gamma_bckgd(SIGMA_ION.getVal(), SIGMA_REC.getVal(),
+flat_gamma_bckgd_hist = functions.flat_gamma_bckgd(SIGMA_ION.getVal(), SIGMA_REC.getVal(), VOLTAGE,
                                                    binsize=BINSIZE, rec_max=E_REC_MAX, ion_max=E_ION_MAX
                                                    )
 flat_gamma_bckgd_hist.Multiply(total_efficiency)
@@ -192,18 +200,10 @@ flat_ext = ROOT.RooExtendPdf('flat_ext', 'flat_ext', flat_gamma_bckgd_pdf, N_fla
 
 
 # Definition of background only as well as background plus signal pdf
-#bckgd_and_sig_pdf = ROOT.RooAddPdf('bckgd_and_sig_pdf', 'bckgd_and_sig_pdf',
-                                   #ROOT.RooArgList(flat_ext, V49_ext, Cr51_ext, Mn54_ext, Fe55_ext, Zn65_ext, Ga68_ext, Ge68_ext, sig_ext))  #  , Co57_ext
-#bckgd_only_pdf = ROOT.RooAddPdf('bckgd_only_pdf', 'bckgd_only_pdf',
-                                #ROOT.RooArgList(flat_ext, V49_ext, Cr51_ext, Mn54_ext, Fe55_ext, Zn65_ext, Ga68_ext, Ge68_ext))  #  , Co57_ext
 bckgd_and_sig_pdf = ROOT.RooAddPdf('bckgd_and_sig_pdf', 'bckgd_and_sig_pdf',
-                                   ROOT.RooArgList(flat_gamma_bckgd_pdf, V49_pdf, Cr51_pdf, Mn54_pdf, Fe55_pdf, Zn65_pdf, Ga68_pdf, Ge68_pdf, signal_pdf),
-                                   ROOT.RooArgList(N_flat, N_V49, N_Cr51, N_Mn54, N_Fe55, N_Zn65, N_Ga68, N_Ge68, N_signal)
-                                   )  # no Co57
+                                   ROOT.RooArgList(flat_ext, V49_ext, Cr51_ext, Mn54_ext, Fe55_ext, Zn65_ext, Ga68_ext, Ge68_ext, sig_ext))  #  , Co57_ext
 bckgd_only_pdf = ROOT.RooAddPdf('bckgd_only_pdf', 'bckgd_only_pdf',
-                                ROOT.RooArgList(flat_gamma_bckgd_pdf, V49_pdf, Cr51_pdf, Mn54_pdf, Fe55_pdf, Zn65_pdf, Ga68_pdf, Ge68_pdf),
-                                ROOT.RooArgList(N_flat, N_V49, N_Cr51, N_Mn54, N_Fe55, N_Zn65, N_Ga68, N_Ge68)
-                                )  #  Co57
+                                ROOT.RooArgList(flat_ext, V49_ext, Cr51_ext, Mn54_ext, Fe55_ext, Zn65_ext, Ga68_ext, Ge68_ext))  #  , Co57_ext
 
 
 # Create negative log likelihood (NLL) object manually and minimize it
@@ -220,8 +220,8 @@ FitResult.Print('v')
 
 # Create histogram of best fit PDF
 bckgd_and_sig_hist = bckgd_and_sig_pdf.createHistogram('bckgd_and_sig_hist', REC, rf.Binning(int(E_REC_MAX*1/BINSIZE)),
-                                       rf.YVar(ION, rf.Binning(int(E_ION_MAX*1/BINSIZE)))
-                                       )
+                                                       rf.YVar(ION, rf.Binning(int(E_ION_MAX*1/BINSIZE)))
+                                                       )
 bckgd_and_sig_hist.SetTitle('{detector} best fit PDF Bckgd + {mass}GeV Signal'.format(detector=DETECTOR_NAME, mass=WIMP_MASS))
 bckgd_and_sig_hist.SetStats(0)
 
@@ -232,7 +232,7 @@ N_sig = signal_parameter.getVal()
 sigma_n_sig_low = signal_parameter.getAsymErrorLo()
 sigma_n_sig_high = signal_parameter.getAsymErrorHi()
 N_max = N_sig + 1.28 * sigma_n_sig_high
-livetime = 197.  # ID3 livetime after cuts in days
+livetime = 197.6  # ID3 livetime after cuts in days
 mass = 0.160  # ID3 detector mass in kg
 rate = signal_hist.Integral('WIDTH')  # option width absolutely necessary
 N_wimp = rate * livetime * mass * 1e6  # 1e6 factor to scale to pb
@@ -247,7 +247,7 @@ print '{0:9} | {1:10} | {2:8} | {3:8} | {4:10} | {5:10} ({5:.1e})'.format(WIMP_M
 
 
 # Definition of RooFit projections over both energies starting with appropriate binning
-recbins = int(E_REC_MAX*4)
+recbins = int(E_REC_MAX*2)
 ionbins = int(E_ION_MAX*4)
 
 ionframe = ION.frame()
@@ -306,7 +306,7 @@ bckgd_and_sig_pdf.plotOn(recframe, rf.Normalization(1.0,ROOT.RooAbsReal.Relative
                          rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
 # Additional box with parameter fit values
 bckgd_and_sig_pdf.paramOn(recframe, rf.Format('NEU', rf.AutoPrecision(2)),
-                          rf.Layout(0.1, 0.50, 0.9), rf.ShowConstants(ROOT.kFALSE))
+                          rf.Layout(0.1, 0.5, 0.9), rf.ShowConstants(ROOT.kFALSE))
 
 
 # NLL frame for N_signal parameter
@@ -342,7 +342,7 @@ NRline.SetLineWidth(2)
 
 
 # Plotting of fit results (best fit pdf + data, projections in both energies, NLL function)
-c1 = ROOT.TCanvas('c1', 'Fit result overview for %i GeV'%WIMP_MASS, 1200, 900)
+c1 = TCanvas('c1', 'Fit result overview for %i GeV'%WIMP_MASS, 1200, 900)
 c1.Divide(2, 2)
 
 c1.cd(1)
@@ -390,7 +390,7 @@ if NUM_MC_SETS:
 
 
     # plot results of the Monte Carlo toy set fit for all parameters
-    c2 = ROOT.TCanvas('c2', 'MC toy set statistics for {mass} GeV'.format(mass=WIMP_MASS))
+    c2 = TCanvas('c2', 'MC toy set statistics for {mass} GeV'.format(mass=WIMP_MASS))
     NumFitParams = FitParams.getSize()
     c2.Divide(1, NumFitParams, 0.001, 0.001)
 
@@ -434,7 +434,7 @@ if NUM_MC_SETS:
 
     # Additional canvas with distribution of NLL values for all toy set fits
     RealDataBestFitNLL = nll.getVal()
-    c3 = ROOT.TCanvas('c3', 'NLL distribution for Monte Carlo toy sets {mass}GeV'.format(mass=WIMP_MASS), 800, 600)
+    c3 = TCanvas('c3', 'NLL distribution for Monte Carlo toy sets {mass}GeV'.format(mass=WIMP_MASS), 800, 600)
     MCnllframe = MC_study.plotNLL()
     MCnllframe.SetTitle('NLL distribution for {mass}GeV'.format(mass=WIMP_MASS))
     MCnllframe.Draw()
@@ -448,7 +448,7 @@ if NUM_MC_SETS:
     signal = FitResult.floatParsFinal().find('N_signal')
     signalvalue = signal.getVal()
 
-    c4 = ROOT.TCanvas('c4', 'N_signal fit & MC toy set statistics for {mass} GeV'.format(mass=WIMP_MASS), 1000, 500)
+    c4 = TCanvas('c4', 'N_signal fit & MC toy set statistics for {mass} GeV'.format(mass=WIMP_MASS), 1000, 500)
     c4.Divide(2)
 
     c4.cd(1)
