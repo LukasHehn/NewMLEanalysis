@@ -203,15 +203,15 @@ MEASURED_VALUES_ERIC = {
 # Online Threshold in keVee from live time weighted values (detector class)
 MEASURED_VALUES_LUKAS = {
     'ID3' : {'livetime' : 197.6, 'voltage' : 6.40000009537, 'threshold_ee' : 1.98964249642, 'threshold_nr' : 4.27758077779},
-    'ID6' : {'voltage' : 8.0, 'threshold_ee' : 1.09144984615, 'threshold_nr' : 2.64166124022},
-    'ID401' : {'voltage' : 7.55912944983, 'threshold_ee' : 2.52587734932, 'threshold_nr' : 5.64077829638},
+    'ID6' : {'livetime' : 147.1, 'voltage' : 8.0, 'threshold_ee' : 1.09144984615, 'threshold_nr' : 2.64166124022},
+    'ID401' : {'livetime' : 145.4, 'voltage' : 7.55912944983, 'threshold_ee' : 2.52587734932, 'threshold_nr' : 5.64077829638},
 }
 
 
 # Parameters for the fitted fiducial efficiency function
 FIDUCIAL_EFFICIENCY_PARAMETERS = {
     'ID2' : {'max' : 0.99, 'slope' : -1.73, 'cutoff' : 1.74},
-    'ID3' : {'max' : 0.947, 'slope' : -1.876, 'cutoff' : 1.247},
+    'ID3' : {'max' : 0.947, 'slope' : -1.876, 'cutoff' : 1.247},  # ID3 has lowest (=best) cutoff
     'ID6' : {'max' : 0.96, 'slope' : -1.23, 'cutoff' : 1.43},
     'ID401' : {'max' : 0.97, 'slope' : -2.386, 'cutoff' : 1.394},
     'ID404' : {'max' : 0.97, 'slope' : -6.34, 'cutoff' : 1.90}
