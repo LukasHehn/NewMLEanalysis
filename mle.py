@@ -21,18 +21,18 @@ LIVETIME = parameters.MEASURED_VALUES_ERIC[DETECTOR_NAME]['livetime']  # livetim
 DETECTOR_MASS = 0.160  # detector mass in kg
 
 #DATA_FILE = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
-DATA_FILE = '/kalinka/home/hehn/PhD/NewMLEanalysis/Data/ID401_eventlist_ion-rec-only.txt'
+DATA_FILE = '/kalinka/home/hehn/PhD/NewMLEanalysis/Data/{detector}_eventlist_ion-rec-only.txt'.format(detector=DETECTOR_NAME)
 
 
 # Energy Binning and binsize
-E_ION_MAX = 10.
-E_REC_MAX = 20.
+E_ION_MAX = 14.
+E_REC_MAX = 25.
 BINSIZE = 0.1
 
 
-WIMP_MASS = 8
+WIMP_MASS = 15
 NUM_MC_SETS = False  # number of MC toy event sets: 0 means no MC study
-N_SIGNAL_MIN = 0.0  # lower border for n_signal parameter
+(N_SIGNAL_MIN, N_SIGNAL_MAX) = (0.0, 30.0)  # lower border for n_signal parameter
 
 
 # Flags to control procedures
@@ -183,7 +183,7 @@ signal_datahist = ROOT.RooDataHist('signal_datahist', 'signal_datahist',
                                    ROOT.RooArgList(REC, ION), signal_hist)
 signal_pdf = ROOT.RooHistPdf('signal_pdf', 'signal_pdf',
                              ROOT.RooArgSet(REC, ION), signal_datahist)
-N_signal = ROOT.RooRealVar('N_signal', 'WIMP signal events', 0., N_SIGNAL_MIN, 10.)
+N_signal = ROOT.RooRealVar('N_signal', 'WIMP signal events', 0., N_SIGNAL_MIN, N_SIGNAL_MAX)
 sig_ext = ROOT.RooExtendPdf('sig_ext', 'sig_ext', signal_pdf, N_signal)
 
 
@@ -271,8 +271,10 @@ bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ge68_ext"), rf.Normalization(1
                          rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ga68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                          rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("sig_ext"), rf.Normalization(10.0,ROOT.RooAbsReal.RelativeExpected),
-                         rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("sig_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
+                         rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))  # normal signal
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("sig_ext"), rf.Normalization( (N_max/N_sig), ROOT.RooAbsReal.RelativeExpected),
+                         rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))  # N_max
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                          rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
 
@@ -299,8 +301,10 @@ bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ge68_ext"), rf.Normalization(1
                          rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ga68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                          rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(recframe, rf.Components("sig_ext"), rf.Normalization(10.0,ROOT.RooAbsReal.RelativeExpected),
-                         rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid), rf.Precision(1e-6))
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("sig_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
+                         rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("sig_ext"), rf.Normalization( (N_max/N_sig), ROOT.RooAbsReal.RelativeExpected),
+                         rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))  # N_max
 bckgd_and_sig_pdf.plotOn(recframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                          rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
 # Additional box with parameter fit values
@@ -345,6 +349,30 @@ c1 = TCanvas('c1', 'Fit result overview for %i GeV'%WIMP_MASS, 1200, 900)
 c1.Divide(2, 2)
 
 c1.cd(1)
+signal_hist.Draw('CONT LIST')
+signal_hist.SetContour(99)
+c1.Update()
+contours = ROOT.gROOT.GetListOfSpecials().FindObject("contours")
+lowcontour = contours.At(10)
+lowdummy = lowcontour.First()
+lowlevel = lowdummy.Clone()
+lowlevel.SetLineColor(ROOT.kMagenta)
+lowlevel.SetLineWidth(3)
+
+
+midcontour = contours.At(50)
+middummy = midcontour.First()
+midlevel = middummy.Clone()
+midlevel.SetLineColor(ROOT.kMagenta)
+midlevel.SetLineWidth(3)
+
+
+highcontour = contours.At(90)
+highdummy = highcontour.First()
+highlevel = highdummy.Clone()
+highlevel.SetLineColor(ROOT.kMagenta)
+highlevel.SetLineWidth(3)
+
 c1.cd(1).SetLogz()
 bckgd_and_sig_hist.Draw('COLZ')
 realdata_graph.SetMarkerColor(ROOT.kBlack)
@@ -352,6 +380,9 @@ realdata_graph.SetMarkerStyle(ROOT.kPlus)
 realdata_graph.Draw('SAMESP')
 ERline.DrawCopy('SAME')
 NRline.DrawCopy('SAME')
+lowlevel.Draw("SAMEL")
+midlevel.Draw("SAMEL")
+highlevel.Draw("SAMEL")
 c1.cd(3)
 signalNLLframe.Draw()
 signalNLLframe.SetMinimum(0.)
@@ -494,20 +525,20 @@ if SAVE_PLOTS:
         c3.SaveAs('%iGeV_signal-stats.png'%WIMP_MASS)
 
 
-## Print overview of fit results for all MC toy sets
-#if NUM_MC_SETS:
-    #goodlist, badlist = [], []
-    #for i in range(NUM_MC_SETS):
-        #result = MC_study.fitResult(i)
-        #n_sig = result.floatParsFinal().find('N_signal')
-        #edm = result.edm()
-        #covqual = result.covQual()
-        #status = result.status()
-        #invalid_nll = result.numInvalidNLL()
-        #n_sig_error_low = n_sig.getErrorLo()
-        #n_sig_val = n_sig.getVal()
-        #print '{i:3<} {n_sig_val:8.2f} {n_sig_error_low:8.2f} {edm:10.2e} {status} {covqual} {invalid_nll}'.format(i=i, edm=edm, covqual=covqual, invalid_nll=invalid_nll, n_sig_error_low=n_sig_error_low, n_sig_val=n_sig_val, status=status)
-        #if invalid_nll > 0:
-            #badlist.append(n_sig_val)
-        #else:
-            #goodlist.append(n_sig_val)
+# Print overview of fit results for all MC toy sets
+if NUM_MC_SETS:
+    goodlist, badlist = [], []
+    for i in range(NUM_MC_SETS):
+        result = MC_study.fitResult(i)
+        n_sig = result.floatParsFinal().find('N_signal')
+        edm = result.edm()
+        covqual = result.covQual()
+        status = result.status()
+        invalid_nll = result.numInvalidNLL()
+        n_sig_error_low = n_sig.getErrorLo()
+        n_sig_val = n_sig.getVal()
+        print '{i:3<} {n_sig_val:8.2f} {n_sig_error_low:8.2f} {edm:10.2e} {status} {covqual} {invalid_nll}'.format(i=i, edm=edm, covqual=covqual, invalid_nll=invalid_nll, n_sig_error_low=n_sig_error_low, n_sig_val=n_sig_val, status=status)
+        if invalid_nll > 0:
+            badlist.append(n_sig_val)
+        else:
+            goodlist.append(n_sig_val)
