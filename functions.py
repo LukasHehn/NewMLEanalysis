@@ -20,7 +20,7 @@ from parameters import *
 
 
 # global
-global inpath; inpath = 'Run12PeriodInformation/'
+global INPATH; INPATH = 'Run12PeriodInformation/'
 
 
 # date and time binning functions
@@ -170,7 +170,7 @@ def recoil_energy_estimator(energy_ee, voltage):
 
 def voltage_flag_list(Detector, Runtype):
     RunName, VoltageFlag = [], []
-    infile = open(inpath+Detector+'_voltage_'+Runtype+'.txt', 'r')
+    infile = open(INPATH+Detector+'_voltage_'+Runtype+'.txt', 'r')
     for line in infile:
         runname, voltage = line.split()
         RunName.append(str(runname))
