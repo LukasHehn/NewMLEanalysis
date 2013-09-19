@@ -16,10 +16,12 @@ from ROOT import TCanvas
 
 
 # Global variables used in the script
-DETECTOR_NAME = 'ID3'
+DETECTOR_NAME = 'ID401'
+LIVETIME = parameters.MEASURED_VALUES_ERIC[DETECTOR_NAME]['livetime']  # livetime after cuts in days
+DETECTOR_MASS = 0.160  # detector mass in kg
 
-DATA_FILE = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
-#DATA_FILE = '/kalinka/home/hehn/PhD/NewMLEanalysis/Data/ID401_eventlist_ion-rec-only.txt'
+#DATA_FILE = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
+DATA_FILE = '/kalinka/home/hehn/PhD/NewMLEanalysis/Data/ID401_eventlist_ion-rec-only.txt'
 
 
 # Energy Binning and binsize
@@ -29,12 +31,12 @@ BINSIZE = 0.1
 
 
 WIMP_MASS = 8
-NUM_MC_SETS = 10000  # number of MC toy event sets: 0 means no MC study
-N_SIGNAL_MIN = -10.  # lower border for n_signal parameter
+NUM_MC_SETS = False  # number of MC toy event sets: 0 means no MC study
+N_SIGNAL_MIN = 0.0  # lower border for n_signal parameter
 
 
 # Flags to control procedures
-E_ION_SCALING = False  # switches on fit parameter to scale energy ion
+E_ION_SCALING = True  # switches on fit parameter to scale energy ion
 E_REC_SCALING = True  # switches on fit parameter to scale energy rec
 BCKGD_MC = False  # switches on MC study where toy events are produces with bckgd model only
 N_SIG_TEST = False  # either a False flag or a value for N_signal parameter before starting MC study
@@ -42,9 +44,9 @@ SAVE_PLOTS = True  # save all plots as png
 
 
 # Detector specific parameters like resolutions
-VOLTAGE = parameters.AVG_VOLTAGES_ERIC[DETECTOR_NAME]  # 6.4 volt during whole Run 12 for ID3
-E_THRESH_EE = parameters.E_THRESHOLD_LUKAS[DETECTOR_NAME]['EE']
-E_THRESH_NR = parameters.E_THRESHOLD_LUKAS[DETECTOR_NAME]['NR']
+VOLTAGE = parameters.MEASURED_VALUES_LUKAS[DETECTOR_NAME]['voltage']
+E_THRESH_EE = parameters.MEASURED_VALUES_LUKAS[DETECTOR_NAME]['threshold_ee']
+E_THRESH_NR = parameters.MEASURED_VALUES_LUKAS[DETECTOR_NAME]['threshold_nr']
 FWHM_HEAT = parameters.ENERGY_RESOLUTIONS_ERIC[DETECTOR_NAME]['Heat']  # 0.82=value@10keV for ID3 adopted from Eric
 FWHM_ION = parameters.ENERGY_RESOLUTIONS_ERIC[DETECTOR_NAME]['Fiducial']  # 0.72=value@10keV for ID3 adopted from Eric
 FWHM_REC = functions.fwhm_rec_from_heat(FWHM_HEAT, VOLTAGE, 10.)
@@ -177,7 +179,6 @@ signal_hist = functions.wimp_signal(WIMP_MASS, SIGMA_ION.getVal(), SIGMA_REC.get
                                     binsize=BINSIZE, rec_max=E_REC_MAX, ion_max=E_ION_MAX
                                     )
 signal_hist.Multiply(total_efficiency)
-#functions.cut_histogram(signal_hist, 1e-5)
 signal_datahist = ROOT.RooDataHist('signal_datahist', 'signal_datahist',
                                    ROOT.RooArgList(REC, ION), signal_hist)
 signal_pdf = ROOT.RooHistPdf('signal_pdf', 'signal_pdf',
@@ -232,10 +233,8 @@ N_sig = signal_parameter.getVal()
 sigma_n_sig_low = signal_parameter.getAsymErrorLo()
 sigma_n_sig_high = signal_parameter.getAsymErrorHi()
 N_max = N_sig + 1.28 * sigma_n_sig_high
-livetime = 197.6  # ID3 livetime after cuts in days
-mass = 0.160  # ID3 detector mass in kg
 rate = signal_hist.Integral('WIDTH')  # option width absolutely necessary
-N_wimp = rate * livetime * mass * 1e6  # 1e6 factor to scale to pb
+N_wimp = rate * LIVETIME * DETECTOR_MASS * 1e6  # 1e6 factor to scale to pb
 xs_max = N_max / N_wimp
 result_overview = {'N_sig' : N_sig, 'N_max' : N_max, 'rate' : rate, 'xs_max' : xs_max, 'N_wimp' : N_wimp}
 
@@ -272,7 +271,7 @@ bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ge68_ext"), rf.Normalization(1
                          rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("Ga68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                          rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("sig_ext"), rf.Normalization(100.0,ROOT.RooAbsReal.RelativeExpected),
+bckgd_and_sig_pdf.plotOn(ionframe, rf.Components("sig_ext"), rf.Normalization(10.0,ROOT.RooAbsReal.RelativeExpected),
                          rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid))
 bckgd_and_sig_pdf.plotOn(ionframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                          rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
@@ -300,7 +299,7 @@ bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ge68_ext"), rf.Normalization(1
                          rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Components("Ga68_ext"), rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                          rf.LineColor(ROOT.kRed), rf.LineWidth(2), rf.LineStyle(ROOT.kDashed))
-bckgd_and_sig_pdf.plotOn(recframe, rf.Components("sig_ext"), rf.Normalization(100.0,ROOT.RooAbsReal.RelativeExpected),
+bckgd_and_sig_pdf.plotOn(recframe, rf.Components("sig_ext"), rf.Normalization(10.0,ROOT.RooAbsReal.RelativeExpected),
                          rf.LineColor(ROOT.kMagenta), rf.LineWidth(3), rf.LineStyle(ROOT.kSolid), rf.Precision(1e-6))
 bckgd_and_sig_pdf.plotOn(recframe, rf.Normalization(1.0,ROOT.RooAbsReal.RelativeExpected),
                          rf.LineColor(ROOT.kBlue), rf.LineWidth(2), rf.LineStyle(ROOT.kSolid))
@@ -452,7 +451,7 @@ if NUM_MC_SETS:
     c4.Divide(2)
 
     c4.cd(1)
-    ParamDistriFrame = MC_study.plotParam(signal)
+    ParamDistriFrame = MC_study.plotParam(signal, rf.Binning(400))
     ParamDistriFrame.SetTitle('MC toy set fits')
     ParamDistriFrame.Draw()
     ParamDistriFrame.getHist().Fit('gaus', 'QEM')
@@ -495,20 +494,20 @@ if SAVE_PLOTS:
         c3.SaveAs('%iGeV_signal-stats.png'%WIMP_MASS)
 
 
-# Print overview of fit results for all MC toy sets
-if NUM_MC_SETS:
-    goodlist, badlist = [], []
-    for i in range(NUM_MC_SETS):
-        result = MC_study.fitResult(i)
-        n_sig = result.floatParsFinal().find('N_signal')
-        edm = result.edm()
-        covqual = result.covQual()
-        status = result.status()
-        invalid_nll = result.numInvalidNLL()
-        n_sig_error_low = n_sig.getErrorLo()
-        n_sig_val = n_sig.getVal()
-        print '{i:3<} {n_sig_val:8.2f} {n_sig_error_low:8.2f} {edm:10.2e} {status} {covqual} {invalid_nll}'.format(i=i, edm=edm, covqual=covqual, invalid_nll=invalid_nll, n_sig_error_low=n_sig_error_low, n_sig_val=n_sig_val, status=status)
-        if invalid_nll > 0:
-            badlist.append(n_sig_val)
-        else:
-            goodlist.append(n_sig_val)
+## Print overview of fit results for all MC toy sets
+#if NUM_MC_SETS:
+    #goodlist, badlist = [], []
+    #for i in range(NUM_MC_SETS):
+        #result = MC_study.fitResult(i)
+        #n_sig = result.floatParsFinal().find('N_signal')
+        #edm = result.edm()
+        #covqual = result.covQual()
+        #status = result.status()
+        #invalid_nll = result.numInvalidNLL()
+        #n_sig_error_low = n_sig.getErrorLo()
+        #n_sig_val = n_sig.getVal()
+        #print '{i:3<} {n_sig_val:8.2f} {n_sig_error_low:8.2f} {edm:10.2e} {status} {covqual} {invalid_nll}'.format(i=i, edm=edm, covqual=covqual, invalid_nll=invalid_nll, n_sig_error_low=n_sig_error_low, n_sig_val=n_sig_val, status=status)
+        #if invalid_nll > 0:
+            #badlist.append(n_sig_val)
+        #else:
+            #goodlist.append(n_sig_val)

@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
 ####################################################################################################
-#
-# Filter and display events from a KData file
-# Lukas Hehn, 2013
-#
+##
+## Filter and display events from a KData file
+## Lukas Hehn, 2013
+##
 ####################################################################################################
 
 import functions
@@ -17,9 +17,10 @@ from ROOT import TGraph, gROOT, TCanvas, KDataReader
 
 # Definition of parameters used for skimming event set
 DETECTOR_NAME = 'ID401'
+#KDataFile = 'Data/Run12_ID3_bckg_with_subrecords.root'
 KDataFile = 'Data/Run12_ID3+6+401+404_bckg_with_subrecords.root'
-OutFileName = False  # 'Data/ID3_eventlist_ion-rec-only.txt'
-WIMP_MASS = 8  # if wimp mass set, show also signal density of wimp signal
+OutFileName = 'Data/{detector}_eventlist_ion-rec-only.txt'.format(detector=DETECTOR_NAME)
+WIMP_MASS = 10  # if wimp mass set, show also signal density of wimp signal
 
 
 # Difinition of energy range and binning
@@ -36,13 +37,12 @@ HeatFactor = 1.0/1.017
 
 # Import values for baseline, AVG_VOLTAGE and threshold from parameter dictionary
 ERA_CONSTANTS = functions.era_constants(DETECTOR_NAME)
-AVG_VOLTAGE = parameters.AVG_VOLTAGES_LUKAS[DETECTOR_NAME]
-E_THRESH_EE = parameters.E_THRESHOLD_LUKAS[DETECTOR_NAME]
-E_THRESH_NR = functions.recoil_energy_estimator(E_THRESH_EE, AVG_VOLTAGE)
+VOLTAGE = parameters.MEASURED_VALUES_LUKAS[DETECTOR_NAME]['voltage']
+E_THRESH_NR = parameters.MEASURED_VALUES_LUKAS[DETECTOR_NAME]['threshold_nr']
 FWHM_HEAT = parameters.ENERGY_RESOLUTIONS_ERIC[DETECTOR_NAME]['Heat']
 FWHM_ION = parameters.ENERGY_RESOLUTIONS_ERIC[DETECTOR_NAME]['Fiducial']
 FWHM_REC = functions.fwhm_rec_from_heat(FWHM_HEAT, AVG_VOLTAGE, 10)
-GAMMA_CUT = 1.96  # gamma cut from ER centroid in standard deviations
+GAMMA_CUT = False  # gamma cut from ER centroid in standard deviations
 
 print 'AVG_VOLTAGE={AVG_VOLTAGE}V, threshold={thresh:.2f}keVnr, FWHM_ion={ion}keVee, FWHM_heat={heat}keVee, FWHM_rec={rec:.2f}keVnr\n'.format(
     AVG_VOLTAGE=AVG_VOLTAGE, thresh=E_THRESH_NR, ion=FWHM_ION, heat=FWHM_HEAT, rec=FWHM_REC)
@@ -173,6 +173,7 @@ if WIMP_MASS:
     signal.Multiply(total_efficiency)
     signal.Scale(1./signal.GetMaximum())  # maximum value is 1 afterwards
     signal.SetStats(0)
+    signal.SetContour(30)
     print 'Created 2D WIMP signal for %i GeV mass'%WIMP_MASS
 
     bckgd_plus_sig = gamma_bckgd.Clone('bckgd_plus_sig')
