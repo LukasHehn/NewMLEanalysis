@@ -16,12 +16,12 @@ from ROOT import TCanvas
 
 
 # Global variables used in the script
-DETECTOR_NAME = 'ID401'
+DETECTOR_NAME = 'ID3'
 LIVETIME = parameters.MEASURED_VALUES_ERIC[DETECTOR_NAME]['livetime']  # livetime after cuts in days
 DETECTOR_MASS = 0.160  # detector mass in kg
 
-#DATA_FILE = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
-DATA_FILE = '/kalinka/home/hehn/PhD/NewMLEanalysis/Data/{detector}_eventlist_ion-rec-only.txt'.format(detector=DETECTOR_NAME)
+DATA_FILE = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
+#DATA_FILE = '/kalinka/home/hehn/PhD/NewMLEanalysis/Data/{detector}_eventlist_ion-rec-only.txt'.format(detector=DETECTOR_NAME)
 
 
 # Energy Binning and binsize
@@ -30,13 +30,13 @@ E_REC_MAX = 25.
 BINSIZE = 0.1
 
 
-WIMP_MASS = 15
-NUM_MC_SETS = False  # number of MC toy event sets: 0 means no MC study
-(N_SIGNAL_MIN, N_SIGNAL_MAX) = (0.0, 30.0)  # lower border for n_signal parameter
+WIMP_MASS = 30
+NUM_MC_SETS = 1000  # number of MC toy event sets: 0 means no MC study
+(N_SIGNAL_MIN, N_SIGNAL_MAX) = (-10.0, 10.0)  # lower border for n_signal parameter
 
 
 # Flags to control procedures
-E_ION_SCALING = True  # switches on fit parameter to scale energy ion
+E_ION_SCALING = False  # switches on fit parameter to scale energy ion
 E_REC_SCALING = True  # switches on fit parameter to scale energy rec
 BCKGD_MC = False  # switches on MC study where toy events are produces with bckgd model only
 N_SIG_TEST = False  # either a False flag or a value for N_signal parameter before starting MC study
@@ -345,7 +345,7 @@ NRline.SetLineWidth(2)
 
 
 # Plotting of fit results (best fit pdf + data, projections in both energies, NLL function)
-c1 = TCanvas('c1', 'Fit result overview for %i GeV'%WIMP_MASS, 1200, 900)
+c1 = TCanvas('c1', '{detector}_{mass}GeV_best-fit-PDFs'.format(detector=DETECTOR_NAME, mass=WIMP_MASS), 1200, 900)
 c1.Divide(2, 2)
 
 c1.cd(1)
@@ -359,13 +359,11 @@ lowlevel = lowdummy.Clone()
 lowlevel.SetLineColor(ROOT.kMagenta)
 lowlevel.SetLineWidth(3)
 
-
 midcontour = contours.At(50)
 middummy = midcontour.First()
 midlevel = middummy.Clone()
 midlevel.SetLineColor(ROOT.kMagenta)
 midlevel.SetLineWidth(3)
-
 
 highcontour = contours.At(90)
 highdummy = highcontour.First()
@@ -385,8 +383,6 @@ midlevel.Draw("SAMEL")
 highlevel.Draw("SAMEL")
 c1.cd(3)
 signalNLLframe.Draw()
-signalNLLframe.SetMinimum(0.)
-signalNLLframe.SetMaximum(6.)
 ROOT.gPad.Update()
 ParamLine.DrawLine(NsigFit.getVal(), ROOT.gPad.GetUymin(), NsigFit.getVal(), ROOT.gPad.GetUymax())
 ParamLine.SetLineWidth(3)
@@ -420,7 +416,7 @@ if NUM_MC_SETS:
 
 
     # plot results of the Monte Carlo toy set fit for all parameters
-    c2 = TCanvas('c2', 'MC toy set statistics for {mass} GeV'.format(mass=WIMP_MASS))
+    c2 = TCanvas('c2', '{detector}_{mass}GeV_{mc}MC_ALL_NLL+param+pull'.format(detector=DETECTOR_NAME, mass=WIMP_MASS, mc=NUM_MC_SETS))
     NumFitParams = FitParams.getSize()
     c2.Divide(1, NumFitParams, 0.001, 0.001)
 
@@ -436,7 +432,6 @@ if NUM_MC_SETS:
 
         pad.cd(1)
         ParamNLLFrame = parameter.frame()
-        #ParamNLLFrame.SetTitle('NLL fit {name}'.format(name=paramname))
         nll.plotOn(ParamNLLFrame, rf.Precision(1e-5), rf.ShiftToZero())
         ParamNLLFrame.SetMinimum(0.)
         ParamNLLFrame.SetMaximum(100.)
@@ -446,27 +441,25 @@ if NUM_MC_SETS:
 
         pad.cd(2)
         ParamDistriFrame = MC_study.plotParam(parameter)
-        #ParamDistriFrame.SetTitle('MC distri {name}'.format(name=paramname))
         ParamDistriFrame.Draw()
-        #ParamDistriFrame.getHist().Fit('gaus', 'QEM')
+        ParamDistriFrame.getHist().Fit('gaus', 'QEM')
         ROOT.gPad.Update()
         ParamLine.DrawLine(paramvalue, ROOT.gPad.GetUymin(), paramvalue, ROOT.gPad.GetUymax())
 
-        #pad.cd(3)
-        #ParamPullFrame = MC_study.plotPull(parameter, rf.FitGauss())
-        ##ParamPullFrame.SetTitle('MC pull distri {name}'.format(name=paramname))
-        #ParamPullFrame.Draw()
-        #ROOT.gPad.Update()
-        #ZeroLine.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
+        pad.cd(3)
+        ParamPullFrame = MC_study.plotPull(parameter, rf.FitGauss())
+        ParamPullFrame.Draw()
+        ROOT.gPad.Update()
+        ZeroLine.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
 
     c2.SetCanvasSize(1200, 2400)
 
 
     # Additional canvas with distribution of NLL values for all toy set fits
     RealDataBestFitNLL = nll.getVal()
-    c3 = TCanvas('c3', 'NLL distribution for Monte Carlo toy sets {mass}GeV'.format(mass=WIMP_MASS), 800, 600)
+    c3 = TCanvas('c3', '{detector}_{mass}GeV_{mc}MC_NLL'.format(detector=DETECTOR_NAME, mass=WIMP_MASS, mc=NUM_MC_SETS), 800, 600)
     MCnllframe = MC_study.plotNLL()
-    MCnllframe.SetTitle('NLL distribution for {mass}GeV'.format(mass=WIMP_MASS))
+    #MCnllframe.SetTitle('NLL distribution for {mass}GeV'.format(mass=WIMP_MASS))
     MCnllframe.Draw()
     MCnllframe.getHist().Fit('gaus', 'QEM')
     ROOT.gPad.Update()
@@ -478,12 +471,12 @@ if NUM_MC_SETS:
     signal = FitResult.floatParsFinal().find('N_signal')
     signalvalue = signal.getVal()
 
-    c4 = TCanvas('c4', 'N_signal fit & MC toy set statistics for {mass} GeV'.format(mass=WIMP_MASS), 1000, 500)
+    c4 = TCanvas('c4', '{detector}_{mass}GeV_{mc}MC_SIGNAL-param+pull'.format(detector=DETECTOR_NAME, mass=WIMP_MASS, mc=NUM_MC_SETS), 1000, 500)
     c4.Divide(2)
 
     c4.cd(1)
     ParamDistriFrame = MC_study.plotParam(signal, rf.Binning(400))
-    ParamDistriFrame.SetTitle('MC toy set fits')
+    #ParamDistriFrame.SetTitle('MC toy set fits')
     ParamDistriFrame.Draw()
     ParamDistriFrame.getHist().Fit('gaus', 'QEM')
     ROOT.gPad.Update()
@@ -492,7 +485,7 @@ if NUM_MC_SETS:
 
     c4.cd(2)
     ParamPullFrame = MC_study.plotPull(signal)  #rf.FitGauss(ROOT.kTRUE) not really useful because of non-gaussian features
-    ParamPullFrame.SetTitle('MC toy set fits pull')
+    #ParamPullFrame.SetTitle('MC toy set fits pull')
     ParamPullFrame.Draw()
     ROOT.gPad.Update()
     ZeroLine.DrawLine(0, ROOT.gPad.GetUymin(), 0, ROOT.gPad.GetUymax())
@@ -518,11 +511,13 @@ if NUM_MC_SETS:
                                                   result_overview['xs_max_MC'])
 
 
+# Save png bitmap for all canvas as
 if SAVE_PLOTS:
-    c1.SaveAs('%iGeV_PDFs.png'%WIMP_MASS)
+    c1.SaveAs('Plots/'+c1.GetTitle()+'.png')
     if NUM_MC_SETS:
-        c2.SaveAs('%iGeV_param-stats.png'%WIMP_MASS)
-        c3.SaveAs('%iGeV_signal-stats.png'%WIMP_MASS)
+        c2.SaveAs('Plots/'+c2.GetTitle()+'.png')
+        c3.SaveAs('Plots/'+c3.GetTitle()+'.png')
+        c4.SaveAs('Plots/'+c4.GetTitle()+'.png')
 
 
 # Print overview of fit results for all MC toy sets
