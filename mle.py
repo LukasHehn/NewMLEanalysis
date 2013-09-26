@@ -20,8 +20,8 @@ DETECTOR_NAME = 'ID3'
 LIVETIME = parameters.MEASURED_VALUES_ERIC[DETECTOR_NAME]['livetime']  # livetime after cuts in days
 DETECTOR_MASS = 0.160  # detector mass in kg
 
-DATA_FILE = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
-#DATA_FILE = '/kalinka/home/hehn/PhD/NewMLEanalysis/Data/{detector}_eventlist_ion-rec-only.txt'.format(detector=DETECTOR_NAME)
+#DATA_FILE = '/kalinka/home/hehn/PhD/LowMassEric/ID3_eventlist.txt'
+DATA_FILE = '/kalinka/home/hehn/PhD/NewMLEanalysis/Data/{detector}_eventlist_ion-rec-only.txt'.format(detector=DETECTOR_NAME)
 
 
 # Energy Binning and binsize
@@ -36,7 +36,7 @@ NUM_MC_SETS = 1000  # number of MC toy event sets: 0 means no MC study
 
 
 # Flags to control procedures
-E_ION_SCALING = False  # switches on fit parameter to scale energy ion
+E_ION_SCALING = True  # switches on fit parameter to scale energy ion
 E_REC_SCALING = True  # switches on fit parameter to scale energy rec
 BCKGD_MC = False  # switches on MC study where toy events are produces with bckgd model only
 N_SIG_TEST = False  # either a False flag or a value for N_signal parameter before starting MC study
